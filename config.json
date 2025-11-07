@@ -1,49 +1,59 @@
 {
-  "configVersion": "production-1.0",
-  "environment": "production",
+  "configVersion": "test-2.1",
+  "environment": "test",
   "devices": [
     {
       "deviceId": "lobby_tv_001",
-      "deviceName": "Main Lobby TV",
+      "deviceName": "Main Lobby TV (TEST)",
       "orientation": "landscape",
-      "refreshIntervalMinutes": 60,
+      "refreshIntervalMinutes": 5,
       "autoStart": true,
-      "clearCache": false,
+      "clearCache": true,
       "pages": [
         {
           "url": "https://sponsor.kidsim.org",
-          "displayTimeSeconds": 1800,
-          "title": "Sponsor Page - Production"
+          "displayTimeSeconds": 120,
+          "title": "Sponsor Page - TEST VERSION"
+        },
+        {
+          "url": "https://httpbin.org/html",
+          "displayTimeSeconds": 60,
+          "title": "Test Page"
         }
       ]
     },
     {
       "deviceId": "reception_tv_001", 
-      "deviceName": "Reception TV",
-      "orientation": "portrait",
-      "refreshIntervalMinutes": 30,
+      "deviceName": "Reception TV (TEST)",
+      "orientation": "landscape",
+      "refreshIntervalMinutes": 2,
       "autoStart": true,
-      "clearCache": false,
+      "clearCache": true,
       "pages": [
         {
           "url": "https://sponsor.kidsim.org",
-          "displayTimeSeconds": 900,
-          "title": "Reception Display - Production"
+          "displayTimeSeconds": 90,
+          "title": "Reception Display - TEST VERSION"
         }
       ]
     }
   ],
   "default": {
-    "deviceName": "Production Android TV",
+    "deviceName": "TEST Android TV",
     "orientation": "landscape", 
-    "refreshIntervalMinutes": 60,
+    "refreshIntervalMinutes": 5,
     "autoStart": true,
-    "clearCache": false,
+    "clearCache": true,
     "pages": [
       {
         "url": "https://sponsor.kidsim.org",
-        "displayTimeSeconds": 3600,
-        "title": "Default Production Page"
+        "displayTimeSeconds": 180,
+        "title": "Default TEST Page"
+      },
+      {
+        "url": "https://httpbin.org/html",
+        "displayTimeSeconds": 60,
+        "title": "Test HTML Page"
       }
     ]
   }
