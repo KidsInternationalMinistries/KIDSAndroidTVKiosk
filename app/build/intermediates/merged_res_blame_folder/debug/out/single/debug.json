@@ -1,0 +1,18 @@
+[
+    {
+        "merged": "com.kidsim.tvkiosk.app-merged_res-4:/drawable_app_icon.xml.flat",
+        "source": "com.kidsim.tvkiosk.app-main-6:/drawable/app_icon.xml"
+    },
+    {
+        "merged": "com.kidsim.tvkiosk.app-merged_res-4:/layout_activity_main.xml.flat",
+        "source": "com.kidsim.tvkiosk.app-main-6:/layout/activity_main.xml"
+    },
+    {
+        "merged": "com.kidsim.tvkiosk.app-merged_res-4:/drawable_app_banner.xml.flat",
+        "source": "com.kidsim.tvkiosk.app-main-6:/drawable/app_banner.xml"
+    },
+    {
+        "merged": "com.kidsim.tvkiosk.app-merged_res-4:/drawable_app_icon_foreground.xml.flat",
+        "source": "com.kidsim.tvkiosk.app-main-6:/drawable/app_icon_foreground.xml"
+    }
+]

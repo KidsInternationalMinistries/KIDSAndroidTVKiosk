@@ -1,0 +1,220 @@
+-- Merging decision tree log ---
+manifest
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:2:1-66:12
+INJECTED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:2:1-66:12
+INJECTED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:2:1-66:12
+INJECTED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:2:1-66:12
+MERGED from [androidx.leanback:leanback:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\2128867df3481e7b9ff23b28836392d5\transformed\leanback-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.fragment:fragment:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\79955d600c8ccd3587d1971c049c6c43\transformed\fragment-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.recyclerview:recyclerview:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\1af9a1b039cf32faf670d53abcd3eb1c\transformed\recyclerview-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.legacy:legacy-support-core-ui:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\e642399a425d487c9fa26cf8776ec98e\transformed\legacy-support-core-ui-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.media:media:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\ebf3a943790c228c40e49cfe7fdbcbbe\transformed\media-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.legacy:legacy-support-core-utils:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\f97cfa536306c001d51f277f26061397\transformed\legacy-support-core-utils-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.viewpager:viewpager:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\886f419eeae82baa197eefbd6476910d\transformed\viewpager-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.coordinatorlayout:coordinatorlayout:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\fecbc91e7cf021525302ecf5a906efaf\transformed\coordinatorlayout-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.drawerlayout:drawerlayout:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\4daedc209dcd44fee918f6a8764e1893\transformed\drawerlayout-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.slidingpanelayout:slidingpanelayout:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\992faa2959ce0e40cdd0657dd62658bc\transformed\slidingpanelayout-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.customview:customview:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\e9192bbe1038fcd355d8c6c02f69720b\transformed\customview-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.swiperefreshlayout:swiperefreshlayout:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\62407551f9756e03ee0d62294f684eb9\transformed\swiperefreshlayout-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.asynclayoutinflater:asynclayoutinflater:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\353cfbc0571b3151866f56e196c46a52\transformed\asynclayoutinflater-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.loader:loader:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\11fa8b8a312d165c3b28bcabacd3eac9\transformed\loader-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.core:core:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\2aaf4604678088505d6eeedcb6c03f22\transformed\core-1.0.0\AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\12d942f3373363c7a4c08b71d2115045\transformed\versionedparcelable-1.0.0\AndroidManifest.xml:17:1-25:12
+MERGED from [androidx.lifecycle:lifecycle-runtime:2.0.0] C:\Users\norma\.gradle\caches\transforms-3\0b1d695ec1c12f11e6af8b4697a145eb\transformed\lifecycle-runtime-2.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.interpolator:interpolator:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\97f2caad5a34b8edea2ea1421a1e3a2e\transformed\interpolator-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.cursoradapter:cursoradapter:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\34cc8bea7f4ce7ba6f026c3cc0f23ca5\transformed\cursoradapter-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.0.0] C:\Users\norma\.gradle\caches\transforms-3\8748d1d81c5e6247696fa8e6a01e1ac9\transformed\lifecycle-viewmodel-2.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-livedata:2.0.0] C:\Users\norma\.gradle\caches\transforms-3\171f92a05191240a350f36b6aae437d2\transformed\lifecycle-livedata-2.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.0.0] C:\Users\norma\.gradle\caches\transforms-3\8cf497dd26552704911b1e0d87ba5093\transformed\lifecycle-livedata-core-2.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.arch.core:core-runtime:2.0.0] C:\Users\norma\.gradle\caches\transforms-3\93084ebb094ce30bca51024140b97ea0\transformed\core-runtime-2.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.documentfile:documentfile:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\bd9128db17064b820d0dd42b63c5e905\transformed\documentfile-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\9eb5c8a63fc75cba68d65e4ad3deb4cf\transformed\localbroadcastmanager-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.print:print:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\162cadc04953c97b29862eed093f2237\transformed\print-1.0.0\AndroidManifest.xml:17:1-22:12
+	package
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:4:5-33
+		INJECTED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml
+	android:versionName
+		INJECTED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml
+	xmlns:tools
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:3:5-51
+	android:versionCode
+		INJECTED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml
+	xmlns:android
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:2:11-69
+uses-permission#android.permission.INTERNET
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:7:5-67
+	android:name
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:7:22-64
+uses-permission#android.permission.ACCESS_NETWORK_STATE
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:8:5-79
+	android:name
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:8:22-76
+uses-permission#android.permission.RECEIVE_BOOT_COMPLETED
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:11:5-81
+	android:name
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:11:22-78
+uses-permission#android.permission.SYSTEM_ALERT_WINDOW
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:12:5-78
+	android:name
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:12:22-75
+uses-permission#android.permission.WAKE_LOCK
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:13:5-68
+	android:name
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:13:22-65
+uses-feature#android.software.leanback
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:16:5-18:35
+	android:required
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:18:9-32
+	android:name
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:17:9-49
+uses-feature#android.hardware.touchscreen
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:21:5-23:36
+	android:required
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:23:9-33
+	android:name
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:22:9-52
+application
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:25:5-65:19
+INJECTED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:25:5-65:19
+MERGED from [androidx.core:core:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\2aaf4604678088505d6eeedcb6c03f22\transformed\core-1.0.0\AndroidManifest.xml:22:5-89
+MERGED from [androidx.core:core:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\2aaf4604678088505d6eeedcb6c03f22\transformed\core-1.0.0\AndroidManifest.xml:22:5-89
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\12d942f3373363c7a4c08b71d2115045\transformed\versionedparcelable-1.0.0\AndroidManifest.xml:22:5-23:19
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\12d942f3373363c7a4c08b71d2115045\transformed\versionedparcelable-1.0.0\AndroidManifest.xml:22:5-23:19
+	android:extractNativeLibs
+		INJECTED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml
+	android:appComponentFactory
+		ADDED from [androidx.core:core:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\2aaf4604678088505d6eeedcb6c03f22\transformed\core-1.0.0\AndroidManifest.xml:22:18-86
+	android:label
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:29:9-41
+	tools:targetApi
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:31:9-29
+	android:icon
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:28:9-42
+	android:allowBackup
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:26:9-35
+	android:banner
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:27:9-46
+	android:theme
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:30:9-53
+activity#com.kidsim.tvkiosk.MainActivity
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:33:9-45:20
+	android:screenOrientation
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:36:13-50
+	android:launchMode
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:37:13-44
+	android:exported
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:35:13-36
+	android:configChanges
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:38:13-74
+	android:name
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:34:13-41
+intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER+category:name:android.intent.category.LEANBACK_LAUNCHER
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:40:13-44:29
+action#android.intent.action.MAIN
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:41:17-69
+	android:name
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:41:25-66
+category#android.intent.category.LAUNCHER
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:42:17-77
+	android:name
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:42:27-74
+category#android.intent.category.LEANBACK_LAUNCHER
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:43:17-86
+	android:name
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:43:27-83
+receiver#com.kidsim.tvkiosk.BootReceiver
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:48:9-58:20
+	android:enabled
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:50:13-35
+	android:exported
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:51:13-36
+	android:name
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:49:13-41
+intent-filter#action:name:android.intent.action.BOOT_COMPLETED+action:name:android.intent.action.MY_PACKAGE_REPLACED+action:name:android.intent.action.PACKAGE_REPLACED+data:scheme:package
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:52:13-57:29
+	android:priority
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:52:28-51
+action#android.intent.action.BOOT_COMPLETED
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:53:17-79
+	android:name
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:53:25-76
+action#android.intent.action.MY_PACKAGE_REPLACED
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:54:17-84
+	android:name
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:54:25-81
+action#android.intent.action.PACKAGE_REPLACED
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:55:17-81
+	android:name
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:55:25-78
+data
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:56:17-50
+	android:scheme
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:56:23-47
+service#com.kidsim.tvkiosk.service.WatchdogService
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:61:9-64:40
+	android:enabled
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:63:13-35
+	android:exported
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:64:13-37
+	android:name
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:62:13-52
+uses-sdk
+INJECTED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml
+INJECTED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml
+MERGED from [androidx.leanback:leanback:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\2128867df3481e7b9ff23b28836392d5\transformed\leanback-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.leanback:leanback:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\2128867df3481e7b9ff23b28836392d5\transformed\leanback-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.fragment:fragment:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\79955d600c8ccd3587d1971c049c6c43\transformed\fragment-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.fragment:fragment:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\79955d600c8ccd3587d1971c049c6c43\transformed\fragment-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.recyclerview:recyclerview:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\1af9a1b039cf32faf670d53abcd3eb1c\transformed\recyclerview-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.recyclerview:recyclerview:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\1af9a1b039cf32faf670d53abcd3eb1c\transformed\recyclerview-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.legacy:legacy-support-core-ui:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\e642399a425d487c9fa26cf8776ec98e\transformed\legacy-support-core-ui-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.legacy:legacy-support-core-ui:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\e642399a425d487c9fa26cf8776ec98e\transformed\legacy-support-core-ui-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.media:media:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\ebf3a943790c228c40e49cfe7fdbcbbe\transformed\media-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.media:media:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\ebf3a943790c228c40e49cfe7fdbcbbe\transformed\media-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.legacy:legacy-support-core-utils:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\f97cfa536306c001d51f277f26061397\transformed\legacy-support-core-utils-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.legacy:legacy-support-core-utils:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\f97cfa536306c001d51f277f26061397\transformed\legacy-support-core-utils-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.viewpager:viewpager:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\886f419eeae82baa197eefbd6476910d\transformed\viewpager-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.viewpager:viewpager:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\886f419eeae82baa197eefbd6476910d\transformed\viewpager-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.coordinatorlayout:coordinatorlayout:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\fecbc91e7cf021525302ecf5a906efaf\transformed\coordinatorlayout-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.coordinatorlayout:coordinatorlayout:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\fecbc91e7cf021525302ecf5a906efaf\transformed\coordinatorlayout-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.drawerlayout:drawerlayout:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\4daedc209dcd44fee918f6a8764e1893\transformed\drawerlayout-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.drawerlayout:drawerlayout:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\4daedc209dcd44fee918f6a8764e1893\transformed\drawerlayout-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.slidingpanelayout:slidingpanelayout:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\992faa2959ce0e40cdd0657dd62658bc\transformed\slidingpanelayout-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.slidingpanelayout:slidingpanelayout:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\992faa2959ce0e40cdd0657dd62658bc\transformed\slidingpanelayout-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.customview:customview:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\e9192bbe1038fcd355d8c6c02f69720b\transformed\customview-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.customview:customview:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\e9192bbe1038fcd355d8c6c02f69720b\transformed\customview-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.swiperefreshlayout:swiperefreshlayout:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\62407551f9756e03ee0d62294f684eb9\transformed\swiperefreshlayout-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.swiperefreshlayout:swiperefreshlayout:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\62407551f9756e03ee0d62294f684eb9\transformed\swiperefreshlayout-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.asynclayoutinflater:asynclayoutinflater:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\353cfbc0571b3151866f56e196c46a52\transformed\asynclayoutinflater-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.asynclayoutinflater:asynclayoutinflater:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\353cfbc0571b3151866f56e196c46a52\transformed\asynclayoutinflater-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.loader:loader:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\11fa8b8a312d165c3b28bcabacd3eac9\transformed\loader-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.loader:loader:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\11fa8b8a312d165c3b28bcabacd3eac9\transformed\loader-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.core:core:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\2aaf4604678088505d6eeedcb6c03f22\transformed\core-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.core:core:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\2aaf4604678088505d6eeedcb6c03f22\transformed\core-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\12d942f3373363c7a4c08b71d2115045\transformed\versionedparcelable-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\12d942f3373363c7a4c08b71d2115045\transformed\versionedparcelable-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime:2.0.0] C:\Users\norma\.gradle\caches\transforms-3\0b1d695ec1c12f11e6af8b4697a145eb\transformed\lifecycle-runtime-2.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime:2.0.0] C:\Users\norma\.gradle\caches\transforms-3\0b1d695ec1c12f11e6af8b4697a145eb\transformed\lifecycle-runtime-2.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.interpolator:interpolator:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\97f2caad5a34b8edea2ea1421a1e3a2e\transformed\interpolator-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.interpolator:interpolator:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\97f2caad5a34b8edea2ea1421a1e3a2e\transformed\interpolator-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.cursoradapter:cursoradapter:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\34cc8bea7f4ce7ba6f026c3cc0f23ca5\transformed\cursoradapter-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.cursoradapter:cursoradapter:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\34cc8bea7f4ce7ba6f026c3cc0f23ca5\transformed\cursoradapter-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.0.0] C:\Users\norma\.gradle\caches\transforms-3\8748d1d81c5e6247696fa8e6a01e1ac9\transformed\lifecycle-viewmodel-2.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.0.0] C:\Users\norma\.gradle\caches\transforms-3\8748d1d81c5e6247696fa8e6a01e1ac9\transformed\lifecycle-viewmodel-2.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata:2.0.0] C:\Users\norma\.gradle\caches\transforms-3\171f92a05191240a350f36b6aae437d2\transformed\lifecycle-livedata-2.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata:2.0.0] C:\Users\norma\.gradle\caches\transforms-3\171f92a05191240a350f36b6aae437d2\transformed\lifecycle-livedata-2.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.0.0] C:\Users\norma\.gradle\caches\transforms-3\8cf497dd26552704911b1e0d87ba5093\transformed\lifecycle-livedata-core-2.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.0.0] C:\Users\norma\.gradle\caches\transforms-3\8cf497dd26552704911b1e0d87ba5093\transformed\lifecycle-livedata-core-2.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.arch.core:core-runtime:2.0.0] C:\Users\norma\.gradle\caches\transforms-3\93084ebb094ce30bca51024140b97ea0\transformed\core-runtime-2.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.arch.core:core-runtime:2.0.0] C:\Users\norma\.gradle\caches\transforms-3\93084ebb094ce30bca51024140b97ea0\transformed\core-runtime-2.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.documentfile:documentfile:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\bd9128db17064b820d0dd42b63c5e905\transformed\documentfile-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.documentfile:documentfile:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\bd9128db17064b820d0dd42b63c5e905\transformed\documentfile-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\9eb5c8a63fc75cba68d65e4ad3deb4cf\transformed\localbroadcastmanager-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\9eb5c8a63fc75cba68d65e4ad3deb4cf\transformed\localbroadcastmanager-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.print:print:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\162cadc04953c97b29862eed093f2237\transformed\print-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.print:print:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\162cadc04953c97b29862eed093f2237\transformed\print-1.0.0\AndroidManifest.xml:20:5-44
+	android:targetSdkVersion
+		INJECTED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml

@@ -1,0 +1,54 @@
+{
+  "configVersion": "2.0",
+  "devices": [
+    {
+      "deviceId": "tv001",
+      "deviceName": "Lobby TV",
+      "orientation": "landscape",
+      "refreshIntervalMinutes": 60,
+      "autoStart": true,
+      "clearCache": false,
+      "pages": [
+        {
+          "url": "https://sponsor.kidsim.org",
+          "displayTimeSeconds": 600,
+          "title": "Sponsor Page"
+        },
+        {
+          "url": "https://www.example.com/announcements",
+          "displayTimeSeconds": 300,
+          "title": "Announcements"
+        }
+      ]
+    },
+    {
+      "deviceId": "tv002", 
+      "deviceName": "Reception TV",
+      "orientation": "portrait",
+      "refreshIntervalMinutes": 30,
+      "autoStart": true,
+      "clearCache": true,
+      "pages": [
+        {
+          "url": "https://sponsor.kidsim.org",
+          "displayTimeSeconds": 1800,
+          "title": "Main Display"
+        }
+      ]
+    }
+  ],
+  "default": {
+    "deviceName": "Default Android TV",
+    "orientation": "landscape", 
+    "refreshIntervalMinutes": 60,
+    "autoStart": true,
+    "clearCache": false,
+    "pages": [
+      {
+        "url": "https://sponsor.kidsim.org",
+        "displayTimeSeconds": 3600,
+        "title": "Default Page"
+      }
+    ]
+  }
+}

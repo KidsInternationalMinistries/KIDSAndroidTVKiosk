@@ -1,0 +1,11 @@
+R_DEF: Internal format may change without notice
+local
+color app_icon_background
+drawable app_banner
+drawable app_icon
+drawable app_icon_foreground
+id errorText
+id retryButton
+id webView
+layout activity_main
+string app_name
