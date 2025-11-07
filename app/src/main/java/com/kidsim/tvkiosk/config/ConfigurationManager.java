@@ -25,11 +25,11 @@ public class ConfigurationManager {
     private static final String KEY_CONFIG_JSON = "config_json";
     private static final String KEY_LAST_UPDATE = "last_update";
     
-    // GitHub raw URLs - replace with your actual repository
+    // GitHub raw URLs - update with your actual repository
     private static final String PRODUCTION_CONFIG_URL = 
-        "https://raw.githubusercontent.com/your-org/kiosk-config/main/config.json";
+        "https://raw.githubusercontent.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/main/config.json";
     private static final String TEST_CONFIG_URL = 
-        "https://raw.githubusercontent.com/your-org/kiosk-config/test/config.json";
+        "https://raw.githubusercontent.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/test/config.json";
     
     private Context context;
     private SharedPreferences prefs;
