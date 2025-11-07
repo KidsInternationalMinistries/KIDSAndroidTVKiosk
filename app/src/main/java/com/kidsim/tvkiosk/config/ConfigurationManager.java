@@ -35,6 +35,7 @@ public class ConfigurationManager {
     private SharedPreferences prefs;
     private ExecutorService executor;
     private ConfigUpdateListener listener;
+    private GoogleSheetsConfigLoader sheetsLoader;
     
     public interface ConfigUpdateListener {
         void onConfigUpdated(DeviceConfig config);
@@ -76,22 +77,31 @@ public class ConfigurationManager {
         executor.execute(() -> {
             try {
                 String configJson = downloadConfig(finalConfigUrl);
-                DeviceConfig config = parseConfig(configJson);
+                JSONObject configObj = new JSONObject(configJson);
                 
-                // Filter config for this device
-                DeviceConfig deviceConfig = getConfigForThisDevice(config);
-                
-                // Save to preferences
-                prefs.edit()
-                    .putString(KEY_CONFIG_JSON, configJson)
-                    .putLong(KEY_LAST_UPDATE, System.currentTimeMillis())
-                    .apply();
-                
-                if (listener != null) {
-                    listener.onConfigUpdated(deviceConfig);
+                // Check if this configuration uses Google Sheets
+                String configSource = configObj.optString("configSource", "json");
+                if ("googleSheets".equals(configSource)) {
+                    Log.i(TAG, "Google Sheets configuration detected, loading from sheets");
+                    loadConfigFromGoogleSheets(configObj);
+                } else {
+                    // Traditional JSON configuration
+                    Log.i(TAG, "JSON configuration detected, parsing directly");
+                    DeviceConfig config = parseConfig(configJson);
+                    DeviceConfig deviceConfig = getConfigForThisDevice(config);
+                    
+                    // Save to preferences
+                    prefs.edit()
+                        .putString(KEY_CONFIG_JSON, configJson)
+                        .putLong(KEY_LAST_UPDATE, System.currentTimeMillis())
+                        .apply();
+                    
+                    if (listener != null) {
+                        listener.onConfigUpdated(deviceConfig);
+                    }
+                    
+                    Log.i(TAG, "JSON Configuration updated successfully from " + finalConfigUrl);
                 }
-                
-                Log.i(TAG, "Configuration updated successfully from " + finalConfigUrl);
                 
             } catch (Exception e) {
                 Log.e(TAG, "Failed to update configuration from " + finalConfigUrl, e);
@@ -100,6 +110,72 @@ public class ConfigurationManager {
                 }
             }
         });
+    }
+    
+    private void loadConfigFromGoogleSheets(JSONObject baseConfig) {
+        try {
+            String sheetsBaseUrl = baseConfig.getString("googleSheetsBaseUrl");
+            String deviceId = getDeviceName(); // Use device name for sheet matching
+            
+            // Initialize Google Sheets loader if not already done
+            if (sheetsLoader == null) {
+                sheetsLoader = new GoogleSheetsConfigLoader(sheetsBaseUrl);
+            }
+            
+            Log.i(TAG, "Loading configuration for device: " + deviceId + " from Google Sheets");
+            
+            sheetsLoader.loadDeviceConfig(deviceId, new GoogleSheetsConfigLoader.ConfigLoadListener() {
+                @Override
+                public void onConfigLoaded(DeviceConfig config) {
+                    try {
+                        // Save the base config and successful load time
+                        prefs.edit()
+                            .putString(KEY_CONFIG_JSON, baseConfig.toString())
+                            .putLong(KEY_LAST_UPDATE, System.currentTimeMillis())
+                            .apply();
+                        
+                        if (listener != null) {
+                            listener.onConfigUpdated(config);
+                        }
+                        
+                        Log.i(TAG, "Google Sheets configuration loaded successfully for device: " + deviceId);
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error processing loaded config", e);
+                        loadFallbackConfig(baseConfig);
+                    }
+                }
+                
+                @Override
+                public void onConfigLoadFailed(String error) {
+                    Log.w(TAG, "Failed to load from Google Sheets: " + error);
+                    loadFallbackConfig(baseConfig);
+                }
+            });
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error setting up Google Sheets loader", e);
+            loadFallbackConfig(baseConfig);
+        }
+    }
+    
+    private void loadFallbackConfig(JSONObject baseConfig) {
+        try {
+            JSONObject fallbackConfig = baseConfig.getJSONObject("fallbackConfig");
+            DeviceConfig config = parseDeviceConfigFromJson(fallbackConfig);
+            config.setDeviceId(getDeviceId());
+            config.setDeviceName(getDeviceName());
+            
+            if (listener != null) {
+                listener.onConfigUpdated(config);
+            }
+            
+            Log.i(TAG, "Using fallback configuration");
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to load fallback config", e);
+            if (listener != null) {
+                listener.onConfigError("Failed to load any configuration");
+            }
+        }
     }
     
     private String downloadConfig(String urlString) throws IOException {
@@ -163,6 +239,10 @@ public class ConfigurationManager {
     }
     
     private DeviceConfig parseDeviceConfig(JSONObject json) throws JSONException {
+        return parseDeviceConfigFromJson(json);
+    }
+    
+    private DeviceConfig parseDeviceConfigFromJson(JSONObject json) throws JSONException {
         DeviceConfig config = new DeviceConfig();
         
         config.setDeviceId(json.optString("deviceId", getDeviceId()));
@@ -232,6 +312,35 @@ public class ConfigurationManager {
         return Build.MODEL + "_" + Build.SERIAL;
     }
     
+    private String getDeviceName() {
+        try {
+            // Try to get device name from settings first
+            String deviceName = Settings.Global.getString(context.getContentResolver(), "device_name");
+            if (deviceName != null && !deviceName.isEmpty()) {
+                Log.i(TAG, "Using device name from settings: " + deviceName);
+                return deviceName;
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to get device name from settings", e);
+        }
+        
+        try {
+            // Fallback to Bluetooth device name
+            String deviceName = Settings.Secure.getString(context.getContentResolver(), "bluetooth_name");
+            if (deviceName != null && !deviceName.isEmpty()) {
+                Log.i(TAG, "Using Bluetooth device name: " + deviceName);
+                return deviceName;
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to get Bluetooth device name", e);
+        }
+        
+        // Final fallback to Build.MODEL
+        String fallbackName = Build.MODEL;
+        Log.i(TAG, "Using device model as name: " + fallbackName);
+        return fallbackName;
+    }
+    
     private boolean shouldUseTestConfig() {
         String deviceId = getDeviceId();
         
@@ -269,6 +378,9 @@ public class ConfigurationManager {
     public void shutdown() {
         if (executor != null) {
             executor.shutdown();
+        }
+        if (sheetsLoader != null) {
+            sheetsLoader.shutdown();
         }
     }
 }
