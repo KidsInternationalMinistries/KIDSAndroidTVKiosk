@@ -102,38 +102,48 @@ public class GoogleSheetsConfigLoader {
     
     private DeviceConfig parseDeviceConfigFromCsv(String deviceId, List<String> csvLines) {
         try {
-            if (csvLines.size() < 3) {
-                Log.e(TAG, "CSV too short, expected at least 3 lines");
+            if (csvLines.size() < 6) {
+                Log.e(TAG, "CSV too short, expected at least 6 lines");
                 return null;
             }
             
-            // Parse configuration from CSV structure:
-            // Row 1: Device Name, Orientation
-            // Row 2: (empty), Refresh Interval Minutes
-            // Row 3: (empty)
-            // Row 5+: URL, Display Time Seconds
+            // Parse configuration from your CSV structure:
+            // Row 1: "DeviceID", actual device ID (e.g., "Test")
+            // Row 2: "Orientation", orientation value
+            // Row 3: "Refresh Minutes", refresh interval value
+            // Row 4: (empty)
+            // Row 5: "URL", "DisplaySeconds" (headers)
+            // Row 6+: actual URL, display time values
             
             String[] row1 = parseCsvLine(csvLines.get(0));
             String[] row2 = parseCsvLine(csvLines.get(1));
+            String[] row3 = parseCsvLine(csvLines.get(2));
             
-            String deviceName = row1.length > 0 ? row1[0] : deviceId;
-            String orientation = row1.length > 1 ? row1[1] : "landscape";
-            int refreshInterval = 5; // default
+            // Extract values from B column (index 1)
+            String actualDeviceId = row1.length > 1 ? row1[1].trim() : deviceId;
+            String orientation = row2.length > 1 ? row2[1].trim().toLowerCase() : "landscape";
+            int refreshInterval = 60; // default
             
-            if (row2.length > 1) {
+            if (row3.length > 1) {
                 try {
-                    refreshInterval = Integer.parseInt(row2[1].trim());
+                    refreshInterval = Integer.parseInt(row3[1].trim());
                 } catch (NumberFormatException e) {
-                    Log.w(TAG, "Invalid refresh interval, using default: " + row2[1]);
+                    Log.w(TAG, "Invalid refresh interval, using default: " + row3[1]);
                 }
             }
             
-            // Parse pages starting from row 5 (index 4)
+            // Parse pages starting from row 6 (index 5)
             List<PageConfig> pages = new ArrayList<>();
-            for (int i = 4; i < csvLines.size(); i++) {
+            for (int i = 5; i < csvLines.size(); i++) {
                 String[] pageRow = parseCsvLine(csvLines.get(i));
                 if (pageRow.length >= 2 && !pageRow[0].trim().isEmpty()) {
                     String pageUrl = pageRow[0].trim();
+                    
+                    // Skip if this is a header row
+                    if (pageUrl.equalsIgnoreCase("URL")) {
+                        continue;
+                    }
+                    
                     int displayTime = 30; // default
                     
                     try {
@@ -153,10 +163,11 @@ public class GoogleSheetsConfigLoader {
                 return null;
             }
             
-            Log.i(TAG, "Loaded config for " + deviceName + " with " + pages.size() + " pages");
+            String deviceName = actualDeviceId + " Device";
+            Log.i(TAG, "Loaded config for " + deviceName + " with " + pages.size() + " pages, refresh: " + refreshInterval + "min");
             
             DeviceConfig config = new DeviceConfig();
-            config.setDeviceId(deviceId);
+            config.setDeviceId(actualDeviceId);
             config.setDeviceName(deviceName);
             config.setOrientation(orientation);
             config.setRefreshIntervalMinutes(refreshInterval);
