@@ -29,6 +29,7 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     private WebView webView;
     private TextView errorText;
     private Button retryButton;
+    private Button updateButton;
     
     // Configuration and timing
     private ConfigurationManager configManager;
@@ -97,9 +98,11 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         webView = findViewById(R.id.webView);
         errorText = findViewById(R.id.errorText);
         retryButton = findViewById(R.id.retryButton);
+        updateButton = findViewById(R.id.updateButton);
         
         setupWebView();
         setupErrorHandling();
+        setupUpdateButton();
     }
     
     private void setupWebView() {
@@ -162,6 +165,57 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
             Log.i(TAG, "Retry button clicked");
             retryCurrentPage();
         });
+    }
+    
+    private void setupUpdateButton() {
+        updateButton.setOnClickListener(v -> {
+            Log.i(TAG, "Update button clicked");
+            openUpdateDownloader();
+        });
+        
+        // Show update button only for test devices
+        configManager = new ConfigurationManager(this);
+        boolean isTestDevice = isTestDevice();
+        updateButton.setVisibility(isTestDevice ? View.VISIBLE : View.GONE);
+        
+        Log.i(TAG, "Update button " + (isTestDevice ? "visible" : "hidden") + " for this device");
+    }
+    
+    private boolean isTestDevice() {
+        try {
+            String deviceId = android.provider.Settings.Secure.getString(
+                getContentResolver(), android.provider.Settings.Secure.ANDROID_ID);
+            return "test".equals(deviceId);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to get device ID for update button", e);
+            return false;
+        }
+    }
+    
+    private void openUpdateDownloader() {
+        try {
+            // GitHub release URL for test APK download
+            String testApkUrl = "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/latest/download/app-test.apk";
+            
+            // Try to open with Downloader app (common on Android TV)
+            Intent downloaderIntent = new Intent(Intent.ACTION_VIEW);
+            downloaderIntent.setData(android.net.Uri.parse(testApkUrl));
+            downloaderIntent.setPackage("com.esaba.downloader");
+            
+            if (downloaderIntent.resolveActivity(getPackageManager()) != null) {
+                startActivity(downloaderIntent);
+                Log.i(TAG, "Opened test APK URL in Downloader app");
+            } else {
+                // Fallback to browser
+                Intent browserIntent = new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(testApkUrl));
+                startActivity(browserIntent);
+                Log.i(TAG, "Opened test APK URL in browser");
+            }
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to open update downloader", e);
+            Toast.makeText(this, "Failed to open downloader: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
     }
     
     private void loadConfiguration() {

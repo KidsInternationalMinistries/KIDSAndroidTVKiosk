@@ -44,4 +44,19 @@
 
     </LinearLayout>
 
+    <!-- Update button for test devices (top right corner) -->
+    <Button
+        android:id="@+id/updateButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:layout_margin="20dp"
+        android:text="Update Test Version"
+        android:textSize="14sp"
+        android:background="#FF4444"
+        android:textColor="#FFFFFF"
+        android:padding="10dp"
+        android:visibility="gone" />
+
 </RelativeLayout>

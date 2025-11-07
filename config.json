@@ -3,8 +3,8 @@
   "environment": "test",
   "devices": [
     {
-      "deviceId": "lobby_tv_001",
-      "deviceName": "Main Lobby TV (TEST)",
+      "deviceId": "test",
+      "deviceName": "Test Android TV",
       "orientation": "landscape",
       "refreshIntervalMinutes": 5,
       "autoStart": true,
@@ -12,34 +12,24 @@
       "pages": [
         {
           "url": "https://sponsor.kidsim.org",
-          "displayTimeSeconds": 120,
-          "title": "Sponsor Page - TEST VERSION"
+          "displayTimeSeconds": 30,
+          "title": "Sponsor Page"
         },
         {
-          "url": "https://httpbin.org/html",
-          "displayTimeSeconds": 60,
-          "title": "Test Page"
-        }
-      ]
-    },
-    {
-      "deviceId": "reception_tv_001", 
-      "deviceName": "Reception TV (TEST)",
-      "orientation": "landscape",
-      "refreshIntervalMinutes": 2,
-      "autoStart": true,
-      "clearCache": true,
-      "pages": [
+          "url": "https://docs.google.com/spreadsheets/d/e/2PACX-1vTo1fJQUNCnw6r0G-ur1e6LKYlmug6tSfXRiptiUfLDWgKeRLML8TJm7HwwuTJuteisPw4r7Mv6ZBa4/pubhtml",
+          "displayTimeSeconds": 30,
+          "title": "Spreadsheet 1"
+        },
         {
-          "url": "https://sponsor.kidsim.org",
-          "displayTimeSeconds": 90,
-          "title": "Reception Display - TEST VERSION"
+          "url": "https://docs.google.com/spreadsheets/d/e/2PACX-1vTgEcSpM-kK9lwno2FAS5bsYxh6YCJuX7DiAPG7B3qx68AUcEgo4W_jmJAVFRRJzQKroeQnoShlz8ms/pubhtml",
+          "displayTimeSeconds": 30,
+          "title": "Spreadsheet 2"
         }
       ]
     }
   ],
   "default": {
-    "deviceName": "TEST Android TV",
+    "deviceName": "Default Test Android TV",
     "orientation": "landscape", 
     "refreshIntervalMinutes": 5,
     "autoStart": true,
@@ -48,12 +38,7 @@
       {
         "url": "https://sponsor.kidsim.org",
         "displayTimeSeconds": 180,
-        "title": "Default TEST Page"
-      },
-      {
-        "url": "https://httpbin.org/html",
-        "displayTimeSeconds": 60,
-        "title": "Test HTML Page"
+        "title": "Default Test Page"
       }
     ]
   }

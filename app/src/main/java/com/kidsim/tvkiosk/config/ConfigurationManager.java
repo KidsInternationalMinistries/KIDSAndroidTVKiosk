@@ -237,10 +237,10 @@ public class ConfigurationManager {
         
         // Add test device IDs here - devices that should use test configuration
         String[] testDeviceIds = {
-            // Add your test device IDs here
-            // "abc123def456",     // Your development device
-            // "test_device_01",   // Test TV #1
-            // "test_device_02"    // Test TV #2
+            "test",                 // Your test Android TV device
+            // "abc123def456",      // Add more test device IDs here
+            // "test_device_01",    // Test TV #1
+            // "test_device_02"     // Test TV #2
         };
         
         for (String testId : testDeviceIds) {
