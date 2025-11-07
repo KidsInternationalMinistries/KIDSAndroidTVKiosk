@@ -235,9 +235,17 @@ public class ConfigurationManager {
     private boolean shouldUseTestConfig() {
         String deviceId = getDeviceId();
         
+        // Log device ID for debugging
+        Log.i(TAG, "=== DEVICE ID DEBUG ===");
+        Log.i(TAG, "Current Device ID: " + deviceId);
+        Log.i(TAG, "======================");
+        
         // Add test device IDs here - devices that should use test configuration
         String[] testDeviceIds = {
             "test",                 // Your test Android TV device
+            "382a9b8d8e53e5df",     // Your phone device ID (actual from logs)
+            "bd97668be0c1ef6e",     // Your phone device ID (from ADB command)
+            "33021JEHN03011",       // Your phone ADB serial (backup)
             // "abc123def456",      // Add more test device IDs here
             // "test_device_01",    // Test TV #1
             // "test_device_02"     // Test TV #2
