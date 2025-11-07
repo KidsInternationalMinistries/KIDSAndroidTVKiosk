@@ -1,10 +1,35 @@
 {
-  "configVersion": "test-2.1",
+  "configVersion": "test-2.2",
   "environment": "test",
   "devices": [
     {
       "deviceId": "test",
       "deviceName": "Test Android TV",
+      "orientation": "landscape",
+      "refreshIntervalMinutes": 5,
+      "autoStart": true,
+      "clearCache": true,
+      "pages": [
+        {
+          "url": "https://sponsor.kidsim.org",
+          "displayTimeSeconds": 30,
+          "title": "Sponsor Page"
+        },
+        {
+          "url": "https://docs.google.com/spreadsheets/d/e/2PACX-1vTo1fJQUNCnw6r0G-ur1e6LKYlmug6tSfXRiptiUfLDWgKeRLML8TJm7HwwuTJuteisPw4r7Mv6ZBa4/pubhtml",
+          "displayTimeSeconds": 30,
+          "title": "Spreadsheet 1"
+        },
+        {
+          "url": "https://docs.google.com/spreadsheets/d/e/2PACX-1vTgEcSpM-kK9lwno2FAS5bsYxh6YCJuX7DiAPG7B3qx68AUcEgo4W_jmJAVFRRJzQKroeQnoShlz8ms/pubhtml",
+          "displayTimeSeconds": 30,
+          "title": "Spreadsheet 2"
+        }
+      ]
+    },
+    {
+      "deviceId": "Test",
+      "deviceName": "Test Device",
       "orientation": "landscape",
       "refreshIntervalMinutes": 5,
       "autoStart": true,
