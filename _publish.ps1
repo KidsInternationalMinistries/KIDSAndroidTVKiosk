@@ -69,19 +69,41 @@ if ($BuildType -eq "debug") {
     Write-Host "Publishing release from branch: $currentBranch" -ForegroundColor Cyan
 }
 
-# Check if GitHub CLI is available
-if (-not (Get-Command "gh" -ErrorAction SilentlyContinue)) {
-    Write-Host "Error: GitHub CLI (gh) is not installed or not in PATH" -ForegroundColor Red
+# Find GitHub CLI executable
+$ghCommand = $null
+$ghPaths = @(
+    "gh",  # Try PATH first
+    "C:\Program Files\GitHub CLI\gh.exe",
+    "C:\Program Files (x86)\GitHub CLI\gh.exe",
+    "$env:LOCALAPPDATA\GitHubCLI\gh.exe"
+)
+
+foreach ($path in $ghPaths) {
+    if ($path -eq "gh") {
+        if (Get-Command "gh" -ErrorAction SilentlyContinue) {
+            $ghCommand = "gh"
+            break
+        }
+    } elseif (Test-Path $path) {
+        $ghCommand = $path
+        break
+    }
+}
+
+if (-not $ghCommand) {
+    Write-Host "Error: GitHub CLI (gh) is not installed" -ForegroundColor Red
     Write-Host "Please install GitHub CLI from: https://cli.github.com/" -ForegroundColor Yellow
     Write-Host "Or use: winget install --id GitHub.cli" -ForegroundColor Yellow
     exit 1
 }
 
+Write-Host "Using GitHub CLI: $ghCommand" -ForegroundColor Green
+
 # Check if logged into GitHub CLI
-$ghStatus = gh auth status 2>&1
+$ghStatus = & $ghCommand auth status 2>&1
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Error: Not logged into GitHub CLI" -ForegroundColor Red
-    Write-Host "Please run: gh auth login" -ForegroundColor Yellow
+    Write-Host "Please run: $ghCommand auth login" -ForegroundColor Yellow
     exit 1
 }
 
@@ -216,10 +238,10 @@ Write-Host "Step $stepNum`: Creating/updating GitHub release..." -ForegroundColo
 
 if ($BuildType -eq "debug") {
     # Check if debug release already exists and delete it
-    $existingRelease = gh release view "debug" 2>$null
+    $existingRelease = & $ghCommand release view "debug" 2>$null
     if ($existingRelease) {
         Write-Host "Updating existing debug release..." -ForegroundColor Cyan
-        gh release delete "debug" --yes
+        & $ghCommand release delete "debug" --yes
     }
     Write-Host "Creating new debug pre-release..." -ForegroundColor Cyan
 }
@@ -237,7 +259,7 @@ if ($BuildType -eq "debug") {
     # We can add this if needed, but let's first test current behavior
 }
 
-gh release create @releaseArgs
+& $ghCommand release create @releaseArgs
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Error: Failed to create GitHub release" -ForegroundColor Red
     exit 1
