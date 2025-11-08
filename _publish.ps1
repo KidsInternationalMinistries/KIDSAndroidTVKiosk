@@ -119,7 +119,7 @@ if ($BuildType -eq "debug") {
 } else {
     # Release build
     $buildTask = "assembleRelease"
-    $apkPath = "app/build/outputs/apk/release/app-release-unsigned.apk"
+    $apkPath = "app/build/outputs/apk/release/app-release.apk"
     $isPrerelease = $false
     $needsTag = $true
     
