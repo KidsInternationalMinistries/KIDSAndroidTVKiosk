@@ -4,13 +4,95 @@
     android:layout_height="match_parent"
     android:background="#000000">
 
-    <!-- WebView for displaying pages -->
-    <WebView
-        android:id="@+id/webView"
+    <!-- Container for multiple WebViews -->
+    <FrameLayout
+        android:id="@+id/webViewContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <!-- WebView for Page 1 -->
+        <WebView
+            android:id="@+id/webView0"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_margin="0dp"
+            android:background="#000000"
+            android:visibility="gone" />
+
+        <!-- WebView for Page 2 -->
+        <WebView
+            android:id="@+id/webView1"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_margin="0dp"
+            android:background="#000000"
+            android:visibility="gone" />
+
+        <!-- WebView for Page 3 -->
+        <WebView
+            android:id="@+id/webView2"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_margin="0dp"
+            android:background="#000000"
+            android:visibility="gone" />
+
+        <!-- Backup WebViews for background refresh -->
+        <WebView
+            android:id="@+id/backupWebView0"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_margin="0dp"
+            android:background="#000000"
+            android:visibility="gone" />
+
+        <WebView
+            android:id="@+id/backupWebView1"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_margin="0dp"
+            android:background="#000000"
+            android:visibility="gone" />
+
+        <WebView
+            android:id="@+id/backupWebView2"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_margin="0dp"
+            android:background="#000000"
+            android:visibility="gone" />
+
+    </FrameLayout>
+
+    <!-- Loading indicator -->
+    <LinearLayout
+        android:id="@+id/loadingLayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_margin="0dp"
-        android:background="#000000" />
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="#000000"
+        android:visibility="visible">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Loading Kiosk..."
+            android:textColor="#FFFFFF"
+            android:textSize="24sp"
+            android:textAlignment="center" />
+
+        <TextView
+            android:id="@+id/loadingProgress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0/3 pages loaded"
+            android:textColor="#CCCCCC"
+            android:textSize="16sp"
+            android:textAlignment="center"
+            android:layout_marginTop="16dp" />
+
+    </LinearLayout>
 
     <!-- Error state UI (initially hidden) -->
     <LinearLayout
@@ -19,7 +101,9 @@
         android:orientation="vertical"
         android:gravity="center"
         android:background="#000000"
-        android:padding="40dp">
+        android:padding="40dp"
+        android:visibility="gone"
+        android:id="@+id/errorLayout">
 
         <TextView
             android:id="@+id/errorText"
@@ -43,5 +127,20 @@
             android:visibility="gone" />
 
     </LinearLayout>
+
+    <!-- Update button for test devices (top right corner) -->
+    <Button
+        android:id="@+id/updateButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:layout_margin="20dp"
+        android:text="Update Test Version"
+        android:textSize="14sp"
+        android:background="#FF4444"
+        android:textColor="#FFFFFF"
+        android:padding="10dp"
+        android:visibility="gone" />
 
 </RelativeLayout>

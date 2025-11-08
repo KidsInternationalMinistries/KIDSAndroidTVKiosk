@@ -37,11 +37,11 @@ public class UpdateActivity extends Activity {
     private static final String TAG = "UpdateActivity";
     
     // GitHub URLs for APK downloads
-    // Note: These URLs point to GitHub Releases where APK files should be uploaded
+    // Note: These URLs point to GitHub Releases where APK files are uploaded
     private static final String GITHUB_DEBUG_APK_URL = 
-        "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/latest/download/app-debug.apk";
+        "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/latest/download/app-test.apk";
     private static final String GITHUB_RELEASE_APK_URL = 
-        "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/latest/download/app-release.apk";
+        "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/latest/download/app-test.apk";
     
     private SharedPreferences preferences;
     private DeviceIdManager deviceIdManager;
@@ -299,14 +299,23 @@ public class UpdateActivity extends Activity {
             Uri downloadUri = Uri.parse(apkUrl);
             DownloadManager.Request request = new DownloadManager.Request(downloadUri);
             
-            // Check if external storage is available
-            if (!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
-                throw new Exception("External storage not available");
+            // Use app's external files directory instead of public Downloads
+            // This doesn't require MANAGE_EXTERNAL_STORAGE permission on Android 11+
+            File externalFilesDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+            if (externalFilesDir == null) {
+                throw new Exception("External files directory not available");
+            }
+            
+            File downloadFile = new File(externalFilesDir, "kiosk-update.apk");
+            
+            // Delete existing file if it exists
+            if (downloadFile.exists()) {
+                downloadFile.delete();
             }
             
             request.setTitle("Kiosk App Update");
             request.setDescription("Downloading " + buildType + " version from GitHub");
-            request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "kiosk-update.apk");
+            request.setDestinationUri(Uri.fromFile(downloadFile));
             request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
             request.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI | DownloadManager.Request.NETWORK_MOBILE);
             request.setAllowedOverRoaming(false);
@@ -408,8 +417,18 @@ public class UpdateActivity extends Activity {
 
     private void installAPK() {
         try {
-            File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-            File apkFile = new File(downloadDir, "kiosk-update.apk");
+            // Use the same location as download - app's external files directory
+            File externalFilesDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+            if (externalFilesDir == null) {
+                String errorMsg = "Error: External files directory not available";
+                Log.e(TAG, errorMsg);
+                statusText.setText(errorMsg);
+                saveAndInstallButton.setEnabled(true);
+                Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show();
+                return;
+            }
+            
+            File apkFile = new File(externalFilesDir, "kiosk-update.apk");
             
             Log.i(TAG, "Checking for APK file at: " + apkFile.getAbsolutePath());
             
@@ -443,9 +462,23 @@ public class UpdateActivity extends Activity {
                 return;
             }
             
-            // Install APK
+            // Install APK using FileProvider for Android 11+ compatibility
             Intent installIntent = new Intent(Intent.ACTION_VIEW);
-            installIntent.setDataAndType(Uri.fromFile(apkFile), "application/vnd.android.package-archive");
+            
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                // Use FileProvider for Android 7+ (required for security)
+                Uri apkUri = androidx.core.content.FileProvider.getUriForFile(
+                    this, 
+                    "com.kidsim.tvkiosk.fileprovider", 
+                    apkFile
+                );
+                installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+                installIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            } else {
+                // Legacy approach for older Android versions
+                installIntent.setDataAndType(Uri.fromFile(apkFile), "application/vnd.android.package-archive");
+            }
+            
             installIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             
             statusText.setText("Installing APK...");

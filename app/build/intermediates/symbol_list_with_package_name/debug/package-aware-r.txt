@@ -574,6 +574,7 @@ dimen subtitle_shadow_radius
 drawable app_banner
 drawable app_icon
 drawable app_icon_foreground
+drawable dropdown_arrow
 drawable lb_action_bg
 drawable lb_action_bg_focused
 drawable lb_background
@@ -636,6 +637,8 @@ drawable notification_template_icon_bg
 drawable notification_template_icon_low_bg
 drawable notification_tile_bg
 drawable notify_panel_notification_icon_bg
+drawable spinner_background
+drawable update_icon
 fraction lb_browse_header_unselect_alpha
 fraction lb_browse_rows_scale
 fraction lb_focus_zoom_factor_large
@@ -669,6 +672,9 @@ id background
 id background_container
 id background_imagein
 id background_imageout
+id backupWebView0
+id backupWebView1
+id backupWebView2
 id bar1
 id bar2
 id bar3
@@ -684,6 +690,7 @@ id browse_headers
 id browse_headers_dock
 id browse_headers_root
 id browse_title_group
+id buildTypeSpinner
 id button
 id button_start
 id cancel_action
@@ -718,9 +725,11 @@ id details_overview_image
 id details_overview_right_panel
 id details_root
 id details_rows_dock
+id deviceIdSpinner
 id dummy
 id end
 id end_padder
+id errorLayout
 id errorText
 id error_frame
 id extra
@@ -806,6 +815,8 @@ id left
 id line1
 id line3
 id list_item
+id loadingLayout
+id loadingProgress
 id logo
 id main
 id mainOnly
@@ -831,6 +842,7 @@ id notification_background
 id notification_main_column
 id notification_main_column_container
 id onboarding_fragment_root
+id orientationSpinner
 id page_container
 id page_indicator
 id paused
@@ -847,6 +859,7 @@ id right_side
 id row_content
 id row_header
 id row_header_description
+id saveAndInstallButton
 id scale_frame
 id search_orb
 id secondary_controls_dock
@@ -855,6 +868,7 @@ id separate_time
 id separator
 id spacer
 id start
+id statusText
 id status_bar_latest_event_content
 id tag_transition_group
 id tag_unhandled_key_event_manager
@@ -871,9 +885,13 @@ id top
 id total_time
 id transitionPosition
 id transport_row
+id updateButton
 id video_surface
 id video_surface_container
-id webView
+id webView0
+id webView1
+id webView2
+id webViewContainer
 id wrap_content
 integer cancel_button_image_alpha
 integer lb_browse_headers_transition_delay
@@ -913,6 +931,7 @@ integer slideEdgeEnd
 integer slideEdgeStart
 integer status_bar_notification_info_maxnum
 layout activity_main
+layout activity_update
 layout lb_action_1_line
 layout lb_action_2_lines
 layout lb_background_window
@@ -987,6 +1006,8 @@ layout notification_template_media
 layout notification_template_media_custom
 layout notification_template_part_chronometer
 layout notification_template_part_time
+layout spinner_dropdown_item
+layout spinner_item
 layout video_surface_fragment
 raw lb_voice_failure
 raw lb_voice_no_input
@@ -1078,6 +1099,7 @@ style Theme_Leanback_GuidedStepBase
 style Theme_Leanback_Onboarding
 style Theme_Leanback_VerticalGrid
 style Theme_LeanbackBase
+style UpdateActivityTheme
 style Widget_Compat_NotificationActionContainer
 style Widget_Compat_NotificationActionText
 style Widget_Leanback
@@ -1199,3 +1221,4 @@ transition lb_title_out
 transition lb_vertical_grid_enter_transition
 transition lb_vertical_grid_entrance_transition
 transition lb_vertical_grid_return_transition
+xml file_provider_paths

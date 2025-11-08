@@ -1,8 +1,8 @@
 1<?xml version="1.0" encoding="utf-8"?>
 2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
 3    package="com.kidsim.tvkiosk"
-4    android:versionCode="1"
-5    android:versionName="1.0" >
+4    android:versionCode="2"
+5    android:versionName="1.1" >
 6
 7    <uses-sdk
 8        android:minSdkVersion="30"
@@ -27,102 +27,164 @@
 18-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:13:5-68
 18-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:13:22-65
 19
-20    <!-- Required feature for Android TV -->
-21    <uses-feature
-21-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:16:5-18:35
-22        android:name="android.software.leanback"
-22-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:17:9-49
-23        android:required="true" />
-23-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:18:9-32
+20    <!-- Permissions for downloading APK updates -->
+21    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+21-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:16:5-81
+21-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:16:22-78
+22    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+22-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:17:5-80
+22-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:17:22-77
+23    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+23-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:18:5-83
+23-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:18:22-80
 24
-25    <!-- Declare this app is for TV -->
+25    <!-- Required feature for Android TV -->
 26    <uses-feature
-26-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:21:5-23:36
-27        android:name="android.hardware.touchscreen"
-27-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:22:9-52
-28        android:required="false" />
-28-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:23:9-33
+26-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:21:5-23:35
+27        android:name="android.software.leanback"
+27-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:22:9-49
+28        android:required="true" />
+28-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:23:9-32
 29
-30    <application
-30-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:25:5-65:19
-31        android:allowBackup="true"
-31-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:26:9-35
-32        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
-32-->[androidx.core:core:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\2aaf4604678088505d6eeedcb6c03f22\transformed\core-1.0.0\AndroidManifest.xml:22:18-86
-33        android:banner="@drawable/app_banner"
-33-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:27:9-46
-34        android:debuggable="true"
-35        android:extractNativeLibs="false"
-36        android:icon="@drawable/app_icon"
-36-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:28:9-42
-37        android:label="@string/app_name"
-37-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:29:9-41
-38        android:theme="@style/Theme.Leanback.Browse" >
-38-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:30:9-53
-39        <activity
-39-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:33:9-45:20
-40            android:name="com.kidsim.tvkiosk.MainActivity"
-40-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:34:13-41
-41            android:configChanges="orientation|keyboardHidden|screenSize"
-41-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:38:13-74
-42            android:exported="true"
-42-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:35:13-36
-43            android:launchMode="singleTask"
-43-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:37:13-44
-44            android:screenOrientation="landscape" >
-44-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:36:13-50
-45            <intent-filter>
-45-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:40:13-44:29
-46                <action android:name="android.intent.action.MAIN" />
-46-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:41:17-69
-46-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:41:25-66
-47
-48                <category android:name="android.intent.category.LAUNCHER" />
-48-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:42:17-77
-48-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:42:27-74
-49                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-49-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:43:17-86
-49-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:43:27-83
-50            </intent-filter>
-51        </activity>
-52
-53        <!-- Boot receiver for auto-start functionality -->
-54        <receiver
-54-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:48:9-58:20
-55            android:name="com.kidsim.tvkiosk.BootReceiver"
-55-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:49:13-41
-56            android:enabled="true"
-56-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:50:13-35
-57            android:exported="true" >
-57-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:51:13-36
-58            <intent-filter android:priority="1000" >
-58-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:52:13-57:29
-58-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:52:28-51
-59                <action android:name="android.intent.action.BOOT_COMPLETED" />
-59-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:53:17-79
-59-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:53:25-76
-60                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
-60-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:54:17-84
-60-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:54:25-81
-61                <action android:name="android.intent.action.PACKAGE_REPLACED" />
-61-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:55:17-81
-61-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:55:25-78
-62
-63                <data android:scheme="package" />
-63-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:56:17-50
-63-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:56:23-47
-64            </intent-filter>
-65        </receiver>
-66
-67        <!-- Watchdog service for app stability -->
-68        <service
-68-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:61:9-64:40
-69            android:name="com.kidsim.tvkiosk.service.WatchdogService"
-69-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:62:13-52
-70            android:enabled="true"
-70-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:63:13-35
-71            android:exported="false" />
-71-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:64:13-37
-72    </application>
+30    <!-- Declare this app is for TV -->
+31    <uses-feature
+31-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:26:5-28:36
+32        android:name="android.hardware.touchscreen"
+32-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:27:9-52
+33        android:required="false" />
+33-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:28:9-33
+34
+35    <application
+35-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:30:5-98:19
+36        android:allowBackup="true"
+36-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:31:9-35
+37        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+37-->[androidx.core:core:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\2aaf4604678088505d6eeedcb6c03f22\transformed\core-1.0.0\AndroidManifest.xml:22:18-86
+38        android:banner="@drawable/app_banner"
+38-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:32:9-46
+39        android:debuggable="true"
+40        android:extractNativeLibs="false"
+41        android:icon="@drawable/app_icon"
+41-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:33:9-42
+42        android:label="@string/app_name"
+42-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:34:9-41
+43        android:theme="@style/Theme.Leanback.Browse" >
+43-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:35:9-53
+44        <activity
+44-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:38:9-51:20
+45            android:name="com.kidsim.tvkiosk.MainActivity"
+45-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:39:13-41
+46            android:configChanges="orientation|keyboardHidden|screenSize"
+46-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:43:13-74
+47            android:exported="true"
+47-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:40:13-36
+48            android:label="Kiosk"
+48-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:44:13-34
+49            android:launchMode="singleTask"
+49-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:42:13-44
+50            android:screenOrientation="sensor" >
+50-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:41:13-47
+51            <intent-filter>
+51-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:46:13-50:29
+52                <action android:name="android.intent.action.MAIN" />
+52-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:47:17-69
+52-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:47:25-66
+53
+54                <category android:name="android.intent.category.LAUNCHER" />
+54-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:48:17-77
+54-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:48:27-74
+55                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+55-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:49:17-86
+55-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:49:27-83
+56            </intent-filter>
+57        </activity>
+58        <activity
+58-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:53:9-67:20
+59            android:name="com.kidsim.tvkiosk.UpdateActivity"
+59-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:54:13-43
+60            android:exported="true"
+60-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:55:13-36
+61            android:icon="@drawable/update_icon"
+61-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:59:13-49
+62            android:label="Kiosk Update"
+62-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:58:13-41
+63            android:launchMode="singleTask"
+63-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:57:13-44
+64            android:screenOrientation="sensor"
+64-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:56:13-47
+65            android:theme="@style/UpdateActivityTheme" >
+65-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:60:13-55
+66            <intent-filter>
+66-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:46:13-50:29
+67                <action android:name="android.intent.action.MAIN" />
+67-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:47:17-69
+67-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:47:25-66
+68
+69                <category android:name="android.intent.category.LAUNCHER" />
+69-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:48:17-77
+69-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:48:27-74
+70                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+70-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:49:17-86
+70-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:49:27-83
+71            </intent-filter>
+72        </activity>
 73
-74</manifest>
+74        <!-- Boot receiver for auto-start functionality -->
+75        <receiver
+75-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:70:9-80:20
+76            android:name="com.kidsim.tvkiosk.BootReceiver"
+76-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:71:13-41
+77            android:enabled="true"
+77-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:72:13-35
+78            android:exported="true" >
+78-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:73:13-36
+79            <intent-filter android:priority="1000" >
+79-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:74:13-79:29
+79-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:74:28-51
+80                <action android:name="android.intent.action.BOOT_COMPLETED" />
+80-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:75:17-79
+80-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:75:25-76
+81                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+81-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:76:17-84
+81-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:76:25-81
+82                <action android:name="android.intent.action.PACKAGE_REPLACED" />
+82-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:77:17-81
+82-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:77:25-78
+83
+84                <data android:scheme="package" />
+84-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:78:17-50
+84-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:78:23-47
+85            </intent-filter>
+86        </receiver>
+87
+88        <!-- Watchdog service for app stability -->
+89        <service
+89-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:83:9-86:40
+90            android:name="com.kidsim.tvkiosk.service.WatchdogService"
+90-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:84:13-52
+91            android:enabled="true"
+91-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:85:13-35
+92            android:exported="false" />
+92-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:86:13-37
+93
+94        <!-- FileProvider for APK installation on Android 11+ -->
+95        <provider
+95-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:89:9-97:20
+96            android:name="androidx.core.content.FileProvider"
+96-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:90:13-62
+97            android:authorities="com.kidsim.tvkiosk.fileprovider"
+97-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:91:13-66
+98            android:exported="false"
+98-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:92:13-37
+99            android:grantUriPermissions="true" >
+99-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:93:13-47
+100            <meta-data
+100-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:94:13-96:63
+101                android:name="android.support.FILE_PROVIDER_PATHS"
+101-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:95:17-67
+102                android:resource="@xml/file_provider_paths" />
+102-->C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:96:17-60
+103        </provider>
+104    </application>
+105
+106</manifest>

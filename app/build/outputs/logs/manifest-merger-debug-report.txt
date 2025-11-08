@@ -1,9 +1,9 @@
 -- Merging decision tree log ---
 manifest
-ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:2:1-66:12
-INJECTED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:2:1-66:12
-INJECTED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:2:1-66:12
-INJECTED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:2:1-66:12
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:2:1-99:12
+INJECTED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:2:1-99:12
+INJECTED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:2:1-99:12
+INJECTED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:2:1-99:12
 MERGED from [androidx.leanback:leanback:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\2128867df3481e7b9ff23b28836392d5\transformed\leanback-1.0.0\AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.fragment:fragment:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\79955d600c8ccd3587d1971c049c6c43\transformed\fragment-1.0.0\AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.recyclerview:recyclerview:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\1af9a1b039cf32faf670d53abcd3eb1c\transformed\recyclerview-1.0.0\AndroidManifest.xml:17:1-22:12
@@ -61,21 +61,33 @@ uses-permission#android.permission.WAKE_LOCK
 ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:13:5-68
 	android:name
 		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:13:22-65
+uses-permission#android.permission.WRITE_EXTERNAL_STORAGE
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:16:5-81
+	android:name
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:16:22-78
+uses-permission#android.permission.READ_EXTERNAL_STORAGE
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:17:5-80
+	android:name
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:17:22-77
+uses-permission#android.permission.REQUEST_INSTALL_PACKAGES
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:18:5-83
+	android:name
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:18:22-80
 uses-feature#android.software.leanback
-ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:16:5-18:35
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:21:5-23:35
 	android:required
-		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:18:9-32
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:23:9-32
 	android:name
-		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:17:9-49
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:22:9-49
 uses-feature#android.hardware.touchscreen
-ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:21:5-23:36
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:26:5-28:36
 	android:required
-		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:23:9-33
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:28:9-33
 	android:name
-		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:22:9-52
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:27:9-52
 application
-ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:25:5-65:19
-INJECTED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:25:5-65:19
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:30:5-98:19
+INJECTED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:30:5-98:19
 MERGED from [androidx.core:core:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\2aaf4604678088505d6eeedcb6c03f22\transformed\core-1.0.0\AndroidManifest.xml:22:5-89
 MERGED from [androidx.core:core:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\2aaf4604678088505d6eeedcb6c03f22\transformed\core-1.0.0\AndroidManifest.xml:22:5-89
 MERGED from [androidx.versionedparcelable:versionedparcelable:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\12d942f3373363c7a4c08b71d2115045\transformed\versionedparcelable-1.0.0\AndroidManifest.xml:22:5-23:19
@@ -85,79 +97,113 @@ MERGED from [androidx.versionedparcelable:versionedparcelable:1.0.0] C:\Users\no
 	android:appComponentFactory
 		ADDED from [androidx.core:core:1.0.0] C:\Users\norma\.gradle\caches\transforms-3\2aaf4604678088505d6eeedcb6c03f22\transformed\core-1.0.0\AndroidManifest.xml:22:18-86
 	android:label
-		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:29:9-41
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:34:9-41
 	tools:targetApi
-		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:31:9-29
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:36:9-29
 	android:icon
-		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:28:9-42
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:33:9-42
 	android:allowBackup
-		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:26:9-35
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:31:9-35
 	android:banner
-		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:27:9-46
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:32:9-46
 	android:theme
-		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:30:9-53
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:35:9-53
 activity#com.kidsim.tvkiosk.MainActivity
-ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:33:9-45:20
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:38:9-51:20
 	android:screenOrientation
-		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:36:13-50
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:41:13-47
+	android:label
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:44:13-34
 	android:launchMode
-		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:37:13-44
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:42:13-44
 	android:exported
-		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:35:13-36
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:40:13-36
 	android:configChanges
-		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:38:13-74
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:43:13-74
 	android:name
-		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:34:13-41
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:39:13-41
 intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER+category:name:android.intent.category.LEANBACK_LAUNCHER
-ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:40:13-44:29
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:46:13-50:29
 action#android.intent.action.MAIN
-ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:41:17-69
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:47:17-69
 	android:name
-		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:41:25-66
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:47:25-66
 category#android.intent.category.LAUNCHER
-ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:42:17-77
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:48:17-77
 	android:name
-		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:42:27-74
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:48:27-74
 category#android.intent.category.LEANBACK_LAUNCHER
-ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:43:17-86
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:49:17-86
 	android:name
-		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:43:27-83
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:49:27-83
+activity#com.kidsim.tvkiosk.UpdateActivity
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:53:9-67:20
+	android:screenOrientation
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:56:13-47
+	android:label
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:58:13-41
+	android:launchMode
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:57:13-44
+	android:exported
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:55:13-36
+	android:icon
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:59:13-49
+	android:theme
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:60:13-55
+	android:name
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:54:13-43
 receiver#com.kidsim.tvkiosk.BootReceiver
-ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:48:9-58:20
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:70:9-80:20
 	android:enabled
-		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:50:13-35
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:72:13-35
 	android:exported
-		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:51:13-36
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:73:13-36
 	android:name
-		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:49:13-41
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:71:13-41
 intent-filter#action:name:android.intent.action.BOOT_COMPLETED+action:name:android.intent.action.MY_PACKAGE_REPLACED+action:name:android.intent.action.PACKAGE_REPLACED+data:scheme:package
-ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:52:13-57:29
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:74:13-79:29
 	android:priority
-		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:52:28-51
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:74:28-51
 action#android.intent.action.BOOT_COMPLETED
-ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:53:17-79
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:75:17-79
 	android:name
-		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:53:25-76
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:75:25-76
 action#android.intent.action.MY_PACKAGE_REPLACED
-ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:54:17-84
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:76:17-84
 	android:name
-		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:54:25-81
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:76:25-81
 action#android.intent.action.PACKAGE_REPLACED
-ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:55:17-81
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:77:17-81
 	android:name
-		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:55:25-78
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:77:25-78
 data
-ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:56:17-50
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:78:17-50
 	android:scheme
-		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:56:23-47
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:78:23-47
 service#com.kidsim.tvkiosk.service.WatchdogService
-ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:61:9-64:40
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:83:9-86:40
 	android:enabled
-		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:63:13-35
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:85:13-35
 	android:exported
-		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:64:13-37
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:86:13-37
 	android:name
-		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:62:13-52
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:84:13-52
+provider#androidx.core.content.FileProvider
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:89:9-97:20
+	android:grantUriPermissions
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:93:13-47
+	android:authorities
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:91:13-66
+	android:exported
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:92:13-37
+	android:name
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:90:13-62
+meta-data#android.support.FILE_PROVIDER_PATHS
+ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:94:13-96:63
+	android:resource
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:96:17-60
+	android:name
+		ADDED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml:95:17-67
 uses-sdk
 INJECTED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from C:\NodeJSCode\KIDSAndroidTVKiosk\app\src\main\AndroidManifest.xml

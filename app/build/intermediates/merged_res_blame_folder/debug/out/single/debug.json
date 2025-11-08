@@ -4,6 +4,10 @@
         "source": "C:\\Users\\norma\\.gradle\\daemon\\8.4\\com.kidsim.tvkiosk.app-main-6:\\drawable\\app_banner.xml"
     },
     {
+        "merged": "com.kidsim.tvkiosk.app-merged_res-4:/xml_file_provider_paths.xml.flat",
+        "source": "com.kidsim.tvkiosk.app-main-6:/xml/file_provider_paths.xml"
+    },
+    {
         "merged": "C:\\Users\\norma\\.gradle\\daemon\\8.4\\com.kidsim.tvkiosk.app-merged_res-4:\\drawable_app_icon.xml.flat",
         "source": "C:\\Users\\norma\\.gradle\\daemon\\8.4\\com.kidsim.tvkiosk.app-main-6:\\drawable\\app_icon.xml"
     },
@@ -12,12 +16,12 @@
         "source": "C:\\Users\\norma\\.gradle\\daemon\\8.4\\com.kidsim.tvkiosk.app-main-6:\\layout\\activity_update.xml"
     },
     {
-        "merged": "C:\\Users\\norma\\.gradle\\daemon\\8.4\\com.kidsim.tvkiosk.app-merged_res-4:\\layout_spinner_item.xml.flat",
-        "source": "C:\\Users\\norma\\.gradle\\daemon\\8.4\\com.kidsim.tvkiosk.app-main-6:\\layout\\spinner_item.xml"
-    },
-    {
         "merged": "C:\\Users\\norma\\.gradle\\daemon\\8.4\\com.kidsim.tvkiosk.app-merged_res-4:\\drawable_update_icon.xml.flat",
         "source": "C:\\Users\\norma\\.gradle\\daemon\\8.4\\com.kidsim.tvkiosk.app-main-6:\\drawable\\update_icon.xml"
+    },
+    {
+        "merged": "C:\\Users\\norma\\.gradle\\daemon\\8.4\\com.kidsim.tvkiosk.app-merged_res-4:\\layout_spinner_item.xml.flat",
+        "source": "C:\\Users\\norma\\.gradle\\daemon\\8.4\\com.kidsim.tvkiosk.app-main-6:\\layout\\spinner_item.xml"
     },
     {
         "merged": "C:\\Users\\norma\\.gradle\\daemon\\8.4\\com.kidsim.tvkiosk.app-merged_res-4:\\layout_spinner_dropdown_item.xml.flat",
@@ -38,9 +42,5 @@
     {
         "merged": "C:\\Users\\norma\\.gradle\\daemon\\8.4\\com.kidsim.tvkiosk.app-merged_res-4:\\drawable_dropdown_arrow.xml.flat",
         "source": "C:\\Users\\norma\\.gradle\\daemon\\8.4\\com.kidsim.tvkiosk.app-main-6:\\drawable\\dropdown_arrow.xml"
-    },
-    {
-        "merged": "com.kidsim.tvkiosk.app-merged_res-4:/layout_activity_update.xml.flat",
-        "source": "com.kidsim.tvkiosk.app-main-6:/layout/activity_update.xml"
     }
 ]
