@@ -25,10 +25,35 @@ if ($currentBranch -ne "test") {
 # Check if test branch is clean and up to date
 $status = git status --porcelain
 if ($status) {
-    Write-Host "Error: You have uncommitted changes on test branch" -ForegroundColor Red
-    Write-Host "Please commit or stash your changes first using:" -ForegroundColor Yellow
-    Write-Host "  .\git_publish_debug.ps1" -ForegroundColor Yellow
-    exit 1
+    Write-Host "Found uncommitted changes on test branch. Auto-committing..." -ForegroundColor Yellow
+    
+    # Clean up build files and add only source code (same as debug script)
+    git clean -fd .gradle/ app/build/ build/ 2>$null
+    git reset HEAD . 2>$null
+    
+    # Add only source files, not build files
+    git add .gitignore
+    git add *.md
+    git add *.json
+    git add *.gradle
+    git add *.properties
+    git add *.bat
+    git add *.ps1
+    git add gradlew*
+    git add "app/src/"
+    git add "gradle/"
+    
+    # Commit with automatic message
+    $autoMessage = "Auto-commit before release - $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
+    Write-Host "Committing changes with message: '$autoMessage'" -ForegroundColor Cyan
+    git commit -m "$autoMessage"
+    
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Error: Failed to auto-commit changes" -ForegroundColor Red
+        exit 1
+    }
+    
+    Write-Host "✓ Changes auto-committed" -ForegroundColor Green
 }
 
 # Get version number
