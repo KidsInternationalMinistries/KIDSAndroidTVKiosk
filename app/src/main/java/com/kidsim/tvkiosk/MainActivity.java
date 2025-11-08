@@ -881,21 +881,21 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     }
     
     /**
-     * Check if device ID is configured, redirect to update screen if needed
+     * Check device ID configuration and proceed with kiosk loading
+     * MainActivity now bypasses setup - setup is only done via UpdateActivity
      */
     private void checkDeviceIdConfiguration() {
         if (!deviceIdManager.isDeviceIdConfigured()) {
-            Log.i(TAG, "Device ID not configured, redirecting to update screen");
-            // Redirect to UpdateActivity for first-time setup
-            Intent updateIntent = new Intent(this, UpdateActivity.class);
-            updateIntent.putExtra("firstTimeSetup", true);
-            startActivity(updateIntent);
-            finish(); // Close MainActivity
+            Log.i(TAG, "Device ID not configured, using default configuration for kiosk");
+            // Set a default device ID so the kiosk can load
+            deviceIdManager.setDeviceId("DefaultKiosk");
+            Log.i(TAG, "Set default device ID: DefaultKiosk");
         } else {
             Log.i(TAG, "Device ID already configured: " + deviceIdManager.getDeviceId());
-            // Configuration is complete, load the app
-            loadConfiguration();
         }
+        
+        // Always load the kiosk - no redirection to UpdateActivity
+        loadConfiguration();
     }
     
     /**

@@ -55,10 +55,15 @@
             android:exported="true"
             android:screenOrientation="sensor"
             android:launchMode="singleTask"
-            android:label="Kiosk Update"
+            android:label="@string/update_app_name"
             android:icon="@drawable/update_icon"
             android:theme="@style/UpdateActivityTheme">
-            <!-- Removed launcher intent filter - UpdateActivity should be accessed from MainActivity or manually -->
+            
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
         </activity>
 
         <!-- Boot receiver for auto-start functionality -->
