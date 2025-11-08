@@ -24,23 +24,30 @@ import android.widget.Toast;
 import com.kidsim.tvkiosk.config.DeviceIdManager;
 import com.kidsim.tvkiosk.config.GoogleSheetsConfigLoader;
 import com.kidsim.tvkiosk.config.ConfigurationManager;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 public class UpdateActivity extends Activity {
     private static final String TAG = "UpdateActivity";
     
-    // GitHub URLs for APK downloads
-    // Note: These URLs point to the specific release version with actual APK files
-    private static final String GITHUB_DEBUG_APK_URL = 
-        "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/download/v1.0-test/app-test.apk";
-    private static final String GITHUB_RELEASE_APK_URL = 
+    // GitHub API URL to get latest release information
+    private static final String GITHUB_RELEASES_API_URL = 
+        "https://api.github.com/repos/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/latest";
+    
+    // Fallback URLs in case API fails (pointing to known working release)
+    private static final String FALLBACK_APK_URL = 
         "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/download/v1.0-test/app-test.apk";
     
     private SharedPreferences preferences;
@@ -287,11 +294,93 @@ public class UpdateActivity extends Activity {
     }
     
     private void downloadAndInstallAPK(String buildType) {
-        statusText.setText("Downloading " + buildType + " APK...");
+        statusText.setText("Getting latest release information...");
         saveAndInstallButton.setEnabled(false);
         
-        // Determine APK URL based on build type
-        String apkUrl = buildType.equals("Debug") ? GITHUB_DEBUG_APK_URL : GITHUB_RELEASE_APK_URL;
+        // Get the latest release download URL in background thread
+        executor.execute(() -> {
+            try {
+                String downloadUrl = getLatestReleaseDownloadUrl();
+                
+                // Switch back to UI thread to start download
+                runOnUiThread(() -> {
+                    if (downloadUrl != null) {
+                        Log.i(TAG, "Found latest release URL: " + downloadUrl);
+                        startDownload(downloadUrl, buildType);
+                    } else {
+                        Log.w(TAG, "Could not get latest release URL, using fallback");
+                        startDownload(FALLBACK_APK_URL, buildType);
+                    }
+                });
+                
+            } catch (Exception e) {
+                Log.e(TAG, "Error getting latest release URL", e);
+                runOnUiThread(() -> {
+                    Log.w(TAG, "Using fallback URL due to error: " + e.getMessage());
+                    startDownload(FALLBACK_APK_URL, buildType);
+                });
+            }
+        });
+    }
+    
+    private String getLatestReleaseDownloadUrl() {
+        try {
+            Log.i(TAG, "Fetching latest release from GitHub API...");
+            URL url = new URL(GITHUB_RELEASES_API_URL);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setRequestProperty("Accept", "application/vnd.github.v3+json");
+            connection.setConnectTimeout(10000);
+            connection.setReadTimeout(10000);
+            
+            int responseCode = connection.getResponseCode();
+            Log.i(TAG, "GitHub API response code: " + responseCode);
+            
+            if (responseCode == 200) {
+                BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                StringBuilder response = new StringBuilder();
+                String line;
+                
+                while ((line = reader.readLine()) != null) {
+                    response.append(line);
+                }
+                reader.close();
+                
+                // Parse JSON response
+                JSONObject releaseData = new JSONObject(response.toString());
+                String tagName = releaseData.getString("tag_name");
+                Log.i(TAG, "Latest release tag: " + tagName);
+                
+                // Look for APK asset in the assets array
+                JSONArray assets = releaseData.getJSONArray("assets");
+                for (int i = 0; i < assets.length(); i++) {
+                    JSONObject asset = assets.getJSONObject(i);
+                    String assetName = asset.getString("name");
+                    
+                    // Look for APK files (app-test.apk, app-release.apk, app-debug.apk, etc.)
+                    if (assetName.toLowerCase().endsWith(".apk")) {
+                        String downloadUrl = asset.getString("browser_download_url");
+                        Log.i(TAG, "Found APK asset: " + assetName + " -> " + downloadUrl);
+                        return downloadUrl;
+                    }
+                }
+                
+                Log.w(TAG, "No APK assets found in latest release");
+                return null;
+                
+            } else {
+                Log.e(TAG, "GitHub API request failed with code: " + responseCode);
+                return null;
+            }
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error fetching latest release", e);
+            return null;
+        }
+    }
+    
+    private void startDownload(String apkUrl, String buildType) {
+        statusText.setText("Downloading " + buildType + " APK...");
         
         try {
             DownloadManager downloadManager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
