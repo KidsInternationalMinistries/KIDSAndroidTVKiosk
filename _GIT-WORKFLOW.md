@@ -5,60 +5,67 @@ This project uses a simple Git workflow for development and deployment. Since yo
 ## Workflow Overview
 
 1. **Development** - Work on the `test` branch
-2. **Testing** - Use `git_publish_debug.ps1` to commit and test changes
-3. **Release** - Use `git_publish_release.ps1` to merge to main and create releases
+2. **Testing** - Use `_git_publish.ps1 debug` to commit and test changes
+3. **Release** - Use `_git_publish.ps1 release` to create versioned releases
 
 ## Branch Structure
 
 - **`test` branch** - Development and testing
-- **`main` branch** - Production releases
+- **`main` branch** - Production releases (via GitHub releases)
 
-## Scripts
+## Unified Publishing Script
 
-### 1. `git_publish_debug.ps1` - For Testing
+### `_git_publish.ps1` - For Both Debug and Release
+
+This unified script handles both debug and release publishing. You can specify the build type or let it prompt you interactively.
+
+#### Debug Mode
 
 **Use this when:** You've made changes and want to test them
 
 **What it does:**
 - Commits your changes to the `test` branch
-- Pushes to GitHub for backup
+- Builds debug APK
+- Creates/updates "debug" pre-release on GitHub
 - Keeps you on `test` branch for continued development
 
 **Usage:**
 ```powershell
-# With custom commit message
-.\git_publish_debug.ps1 -Message "Fixed UI bug in settings screen"
+# Direct debug with custom message
+.\_git_publish.ps1 debug -Message "Fixed UI bug in settings screen"
 
-# Interactive (will prompt for message)
-.\git_publish_debug.ps1
+# Interactive mode (will ask for debug/release choice)
+.\_git_publish.ps1
 ```
 
-### 2. `git_publish_release.ps1` - For Production
+#### Release Mode
 
 **Use this when:** You've tested everything and ready for production
 
 **What it does:**
-- Merges `test` branch into `main` branch
-- Creates a version tag (e.g., v1.0.0)
-- Pushes everything to GitHub
-- Returns you to `test` branch for next development cycle
+- Commits your changes to the `test` branch
+- Builds release APK
+- Extracts version from build.gradle (or uses provided version)
+- Creates version tag (e.g., v1.3)
+- Creates GitHub release with APK
+- Keeps you on `test` branch for next development cycle
 
 **Usage:**
 ```powershell
-# With version and message
-.\git_publish_release.ps1 -Version "v1.0.0" -Message "Initial release with kiosk functionality"
+# Direct release with custom message (version auto-detected from build.gradle)
+.\_git_publish.ps1 release -Message "Release v1.3 with new features"
 
-# Interactive (will prompt for version and message)
-.\git_publish_release.ps1
+# Interactive mode (will ask for debug/release choice)
+.\_git_publish.ps1
 ```
 
 ## Typical Development Cycle
 
 1. **Make changes** to your code
-2. **Test locally** using `.\debug_install.ps1`
-3. **Publish for testing** using `.\git_publish_debug.ps1`
+2. **Test locally** using `.\_debug_install.ps1`
+3. **Publish for testing** using `.\_git_publish.ps1 debug`
 4. **Continue development** or fix issues on `test` branch
-5. **When ready for production** use `.\git_publish_release.ps1`
+5. **When ready for production** use `.\_git_publish.ps1 release`
 
 ## Examples
 
@@ -66,10 +73,10 @@ This project uses a simple Git workflow for development and deployment. Since yo
 ```powershell
 # Make some code changes...
 # Test locally
-.\debug_install.ps1
+.\_debug_install.ps1
 
 # Commit and backup to GitHub
-.\git_publish_debug.ps1 -Message "Added new configuration screen"
+.\_git_publish.ps1 debug -Message "Added new configuration screen"
 
 # Continue working...
 ```
@@ -77,25 +84,30 @@ This project uses a simple Git workflow for development and deployment. Since yo
 ### Creating a Release
 ```powershell
 # Ensure everything is tested and working
-.\debug_install.ps1
+.\_debug_install.ps1
 
 # Final commit
-.\git_publish_debug.ps1 -Message "Final testing complete for v1.1.0"
+.\_git_publish.ps1 debug -Message "Final testing complete for v1.3"
+
+# Update version in build.gradle (if needed)
+.\_bump_version.ps1
 
 # Create production release
-.\git_publish_release.ps1 -Version "v1.1.0" -Message "Added device configuration and Google Sheets integration"
+.\_git_publish.ps1 release -Message "Added device configuration and Google Sheets integration"
 ```
 
 ## Tips
 
-- Always test with `debug_install.ps1` before publishing
+- Always test with `.\_debug_install.ps1` before publishing
 - Use descriptive commit messages
 - Version numbers should follow semantic versioning (v1.0.0, v1.1.0, v2.0.0)
-- The scripts automatically handle Git operations, so you don't need to worry about Git commands
+- The script automatically handles Git operations, so you don't need to worry about Git commands
+- Use `.\_bump_version.ps1` to increment version numbers in build.gradle
 
 ## Safety Features
 
-- Scripts check that you're on the correct branch
-- Scripts verify there are no uncommitted changes before releasing
+- Script checks that you're on the correct branch (`test`)
+- Script verifies GitHub CLI authentication
 - Build files are automatically excluded from commits
+- Version is automatically extracted from build.gradle for releases
 - Scripts provide confirmation prompts before major operations
