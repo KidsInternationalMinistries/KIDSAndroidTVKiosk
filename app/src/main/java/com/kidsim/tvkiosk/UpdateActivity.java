@@ -136,8 +136,16 @@ public class UpdateActivity extends Activity {
     private void setupSpinners() {
         // Build Type Spinner
         List<String> buildTypes = new ArrayList<>();
-        buildTypes.add("Release");
-        buildTypes.add("Debug");
+        
+        // Debug app can only update to debug versions
+        // Production app can choose between Release and Debug
+        if (isDebugApp()) {
+            buildTypes.add("Debug");
+        } else {
+            buildTypes.add("Release");
+            buildTypes.add("Debug");
+        }
+        
         ArrayAdapter<String> buildAdapter = new ArrayAdapter<>(this, 
             R.layout.spinner_item, buildTypes);
         buildAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item);
@@ -296,6 +304,11 @@ public class UpdateActivity extends Activity {
         String orientation = orientationSpinner.getSelectedItem().toString();
         String deviceId = deviceIdSpinner.getSelectedItem().toString();
         
+        // Debug app can only install debug versions
+        if (isDebugApp()) {
+            buildType = "Debug";
+        }
+        
         Log.i(TAG, "Selected values - BuildType: " + buildType + ", Orientation: " + orientation + ", DeviceId: " + deviceId);
         
         // Save preferences
@@ -321,6 +334,11 @@ public class UpdateActivity extends Activity {
         statusText.setText("Getting latest release information...");
         saveAndInstallButton.setEnabled(false);
         
+        // Proceed with download - separate apps means no version conflicts
+        proceedWithDownload(buildType);
+    }
+    
+    private void proceedWithDownload(String buildType) {
         // Get the latest release download URL in background thread
         executor.execute(() -> {
             try {
@@ -767,7 +785,7 @@ public class UpdateActivity extends Activity {
                 try {
                     Uri apkUri = androidx.core.content.FileProvider.getUriForFile(
                         this, 
-                        "com.kidsim.tvkiosk.fileprovider", 
+                        getFileProviderAuthority(), 
                         apkFile
                     );
                     installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
@@ -840,5 +858,25 @@ public class UpdateActivity extends Activity {
                 }
             }
         }
+    }
+    
+    /**
+     * Get the correct FileProvider authority based on the build type
+     */
+    private String getFileProviderAuthority() {
+        // Check if this is a debug build by looking at the package name
+        String packageName = getPackageName();
+        if (packageName.endsWith(".debug")) {
+            return "com.kidsim.tvkiosk.debug.fileprovider";
+        } else {
+            return "com.kidsim.tvkiosk.fileprovider";
+        }
+    }
+    
+    /**
+     * Check if this is the debug app (separate package)
+     */
+    private boolean isDebugApp() {
+        return getPackageName().endsWith(".debug");
     }
 }
