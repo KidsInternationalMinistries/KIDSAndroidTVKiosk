@@ -1,0 +1,27 @@
+# Android build files
+.gradle/
+app/build/
+build/
+local.properties
+
+# IDE files
+.idea/
+*.iml
+
+# APK files
+*.apk
+
+# Platform tools
+platform-tools/
+
+# Debug files
+app-debug-install.apk
+app-test-*.apk
+
+# Temporary files
+*.tmp
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db

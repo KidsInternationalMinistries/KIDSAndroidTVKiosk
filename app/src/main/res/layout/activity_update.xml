@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="40dp"
+    android:background="#F5F5F5">
+
+    <!-- Title -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Kiosk Configuration"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:textColor="#333333"
+        android:gravity="center"
+        android:layout_marginBottom="40dp" />
+
+    <!-- Build Type Section -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Build Type"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="#333333"
+        android:layout_marginBottom="10dp" />
+
+    <Spinner
+        android:id="@+id/buildTypeSpinner"
+        android:layout_width="match_parent"
+        android:layout_height="72dp"
+        android:layout_marginBottom="30dp"
+        android:padding="16dp"
+        android:textColor="#000000"
+        android:textSize="16sp" />
+
+    <!-- Orientation Section -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Orientation"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="#333333"
+        android:layout_marginBottom="10dp" />
+
+    <Spinner
+        android:id="@+id/orientationSpinner"
+        android:layout_width="match_parent"
+        android:layout_height="72dp"
+        android:layout_marginBottom="30dp"
+        android:padding="16dp"
+        android:textColor="#000000"
+        android:textSize="16sp" />
+
+    <!-- Device ID Section -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Device ID"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="#333333"
+        android:layout_marginBottom="10dp" />
+
+    <Spinner
+        android:id="@+id/deviceIdSpinner"
+        android:layout_width="match_parent"
+        android:layout_height="72dp"
+        android:layout_marginBottom="40dp"
+        android:padding="16dp"
+        android:textColor="#000000"
+        android:textSize="16sp" />
+
+    <!-- Status Text -->
+    <TextView
+        android:id="@+id/statusText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Loading device IDs..."
+        android:textSize="16sp"
+        android:textColor="#666666"
+        android:gravity="center"
+        android:layout_marginBottom="20dp" />
+
+    <!-- Save and Install Button -->
+    <Button
+        android:id="@+id/saveAndInstallButton"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:text="Save and Install"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="#ffffff"
+        android:backgroundTint="#4CAF50"
+        android:layout_marginTop="20dp" />
+
+</LinearLayout>

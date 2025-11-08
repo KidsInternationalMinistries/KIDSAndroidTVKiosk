@@ -12,6 +12,11 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     
+    <!-- Permissions for downloading APK updates -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    
     <!-- Required feature for Android TV -->
     <uses-feature
         android:name="android.software.leanback"
@@ -33,9 +38,26 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:screenOrientation="landscape"
+            android:screenOrientation="sensor"
             android:launchMode="singleTask"
-            android:configChanges="orientation|keyboardHidden|screenSize">
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:label="Kiosk">
+            
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".UpdateActivity"
+            android:exported="true"
+            android:screenOrientation="sensor"
+            android:launchMode="singleTask"
+            android:label="Kiosk Update"
+            android:icon="@drawable/update_icon"
+            android:theme="@style/UpdateActivityTheme">
             
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
