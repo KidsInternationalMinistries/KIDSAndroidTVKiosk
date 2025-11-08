@@ -19,23 +19,33 @@ $status = git status --porcelain
 if ($status) {
     Write-Host "Auto-committing uncommitted changes..." -ForegroundColor Yellow
     
-    # Clean up build files
-    git clean -fd .gradle/ app/build/ build/ 2>$null
+    # Force clean ALL build files and IDE files - these should never be committed
+    Write-Host "Cleaning build files..." -ForegroundColor Yellow
+    git checkout HEAD -- .gradle/ 2>$null
+    git checkout HEAD -- app/build/ 2>$null
+    git checkout HEAD -- build/ 2>$null
+    git checkout HEAD -- .idea/ 2>$null
+    git clean -fd .gradle/ app/build/ build/ .idea/ 2>$null
     git reset HEAD . 2>$null
     
-    # Add source files
+    # Add only source files - exclude build directories completely
     git add .gitignore *.md *.json *.gradle *.properties *.bat *.ps1 gradlew* "app/src/" "gradle/"
     
-    # Commit
-    $autoMessage = "Auto-commit before release - $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
-    git commit -m "$autoMessage"
-    
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Error: Failed to auto-commit changes" -ForegroundColor Red
-        exit 1
+    # Only commit if there are actually changes to source files
+    $statusAfterClean = git diff --cached --name-only
+    if ($statusAfterClean) {
+        $autoMessage = "Auto-commit before release - $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
+        git commit -m "$autoMessage"
+        
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Error: Failed to auto-commit changes" -ForegroundColor Red
+            exit 1
+        }
+        
+        Write-Host "Changes auto-committed" -ForegroundColor Green
+    } else {
+        Write-Host "No source changes to commit" -ForegroundColor Green
     }
-    
-    Write-Host "Changes auto-committed" -ForegroundColor Green
 }
 
 # Get version number
@@ -77,8 +87,14 @@ Write-Host "Step 1: Fetching latest..." -ForegroundColor Yellow
 git fetch origin
 
 Write-Host "Step 2: Switching to main..." -ForegroundColor Yellow
+# Stash any remaining uncommitted changes (build files etc)
+git stash push -m "Temporary stash for release" 2>$null
 git checkout main
-if ($LASTEXITCODE -ne 0) { Write-Host "Error switching to main" -ForegroundColor Red; exit 1 }
+if ($LASTEXITCODE -ne 0) { 
+    Write-Host "Error switching to main" -ForegroundColor Red
+    git stash pop 2>$null  # Restore stash if checkout failed
+    exit 1 
+}
 
 Write-Host "Step 3: Updating main..." -ForegroundColor Yellow
 git pull origin main
@@ -99,6 +115,8 @@ if ($LASTEXITCODE -ne 0) { Write-Host "Error pushing" -ForegroundColor Red; exit
 
 Write-Host "Step 7: Back to test..." -ForegroundColor Yellow
 git checkout test
+# Restore any stashed build files
+git stash pop 2>$null
 
 Write-Host ""
 Write-Host "=== Release Complete ===" -ForegroundColor Green
