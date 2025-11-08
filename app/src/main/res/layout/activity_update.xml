@@ -15,7 +15,18 @@
         android:textStyle="bold"
         android:textColor="#333333"
         android:gravity="center"
-        android:layout_marginBottom="40dp" />
+        android:layout_marginBottom="20dp" />
+
+    <!-- Current Version -->
+    <TextView
+        android:id="@+id/currentVersionText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Current Version: Loading..."
+        android:textSize="16sp"
+        android:textColor="#666666"
+        android:gravity="center"
+        android:layout_marginBottom="30dp" />
 
     <!-- Build Type Section -->
     <TextView
@@ -94,7 +105,7 @@
         android:textSize="20sp"
         android:textStyle="bold"
         android:textColor="#ffffff"
-        android:backgroundTint="#4CAF50"
+        android:background="@drawable/install_button_background"
         android:layout_marginTop="20dp" />
 
 </LinearLayout>

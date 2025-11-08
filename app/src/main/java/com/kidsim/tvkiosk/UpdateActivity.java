@@ -10,9 +10,11 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInstaller;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
@@ -61,6 +63,7 @@ public class UpdateActivity extends Activity {
     private Spinner orientationSpinner;
     private Spinner deviceIdSpinner;
     private TextView statusText;
+    private TextView currentVersionText;
     private Button saveAndInstallButton;
     
     private List<String> availableDeviceIds;
@@ -88,13 +91,7 @@ public class UpdateActivity extends Activity {
         setupEventHandlers();
         loadDeviceIds();
         
-        // Register download receiver
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(downloadReceiver, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), 
-                Context.RECEIVER_NOT_EXPORTED);
-        } else {
-            registerReceiver(downloadReceiver, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
-        }
+        // Note: Removed BroadcastReceiver - using periodic status checking instead
     }
     
     @Override
@@ -103,11 +100,7 @@ public class UpdateActivity extends Activity {
         if (executor != null) {
             executor.shutdown();
         }
-        try {
-            unregisterReceiver(downloadReceiver);
-        } catch (Exception e) {
-            // Receiver may not be registered
-        }
+        // Note: No BroadcastReceiver to unregister anymore
     }
     
     private void initializeViews() {
@@ -115,7 +108,25 @@ public class UpdateActivity extends Activity {
         orientationSpinner = findViewById(R.id.orientationSpinner);
         deviceIdSpinner = findViewById(R.id.deviceIdSpinner);
         statusText = findViewById(R.id.statusText);
+        currentVersionText = findViewById(R.id.currentVersionText);
         saveAndInstallButton = findViewById(R.id.saveAndInstallButton);
+        
+        // Start with button disabled until all selections are made
+        saveAndInstallButton.setEnabled(false);
+        
+        // Display current version
+        displayCurrentVersion();
+    }
+    
+    private void displayCurrentVersion() {
+        try {
+            String versionName = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+            int versionCode = getPackageManager().getPackageInfo(getPackageName(), 0).versionCode;
+            currentVersionText.setText("Current Version: " + versionName + " (build " + versionCode + ")");
+        } catch (Exception e) {
+            Log.e(TAG, "Could not get version info", e);
+            currentVersionText.setText("Current Version: Unknown");
+        }
     }
     
     private void setupSpinners() {
@@ -263,6 +274,14 @@ public class UpdateActivity extends Activity {
             !deviceIdSpinner.getSelectedItem().toString().isEmpty();
         
         saveAndInstallButton.setEnabled(hasValidSelections);
+        
+        // Make sure the button visual state updates properly
+        saveAndInstallButton.refreshDrawableState();
+        
+        Log.d(TAG, "Button enabled: " + hasValidSelections + 
+               " (BuildType: " + (buildTypeSpinner.getSelectedItem() != null ? buildTypeSpinner.getSelectedItem().toString() : "null") +
+               ", Orientation: " + (orientationSpinner.getSelectedItem() != null ? orientationSpinner.getSelectedItem().toString() : "null") +
+               ", DeviceId: " + (deviceIdSpinner.getSelectedItem() != null ? deviceIdSpinner.getSelectedItem().toString() : "null") + ")");
     }
     
     private void saveAndInstall() {
@@ -294,18 +313,23 @@ public class UpdateActivity extends Activity {
     }
     
     private void downloadAndInstallAPK(String buildType) {
+        Log.i(TAG, "downloadAndInstallAPK() called for buildType: " + buildType);
         statusText.setText("Getting latest release information...");
         saveAndInstallButton.setEnabled(false);
         
         // Get the latest release download URL in background thread
         executor.execute(() -> {
             try {
+                Log.i(TAG, "Starting GitHub API call in background thread...");
+                runOnUiThread(() -> statusText.setText("Contacting GitHub API..."));
+                
                 String downloadUrl = getLatestReleaseDownloadUrl();
                 
                 // Switch back to UI thread to start download
                 runOnUiThread(() -> {
                     if (downloadUrl != null) {
                         Log.i(TAG, "Found latest release URL: " + downloadUrl);
+                        statusText.setText("Found latest release, starting download...");
                         startDownload(downloadUrl, buildType);
                     } else {
                         Log.w(TAG, "Could not get latest release URL, using fallback");
@@ -418,7 +442,7 @@ public class UpdateActivity extends Activity {
             Log.i(TAG, "Download started with ID: " + downloadId);
             
             // Start a timer to check download status periodically
-            checkDownloadStatus(downloadManager, downloadId);
+            checkDownloadStatusPeriodically(downloadManager, downloadId);
             
         } catch (Exception e) {
             Log.e(TAG, "Error starting download", e);
@@ -428,74 +452,11 @@ public class UpdateActivity extends Activity {
         }
     }
     
-    private void checkDownloadStatus(DownloadManager downloadManager, long downloadId) {
-        // Check status after 5 seconds to see what's happening
-        new android.os.Handler().postDelayed(() -> {
-            DownloadManager.Query query = new DownloadManager.Query();
-            query.setFilterById(downloadId);
-            
-            android.database.Cursor cursor = downloadManager.query(query);
-            if (cursor != null && cursor.moveToFirst()) {
-                int statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
-                int reasonIndex = cursor.getColumnIndex(DownloadManager.COLUMN_REASON);
-                int bytesDownloadedIndex = cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR);
-                int totalSizeIndex = cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES);
-                
-                if (statusIndex >= 0) {
-                    int status = cursor.getInt(statusIndex);
-                    long bytesDownloaded = bytesDownloadedIndex >= 0 ? cursor.getLong(bytesDownloadedIndex) : 0;
-                    long totalSize = totalSizeIndex >= 0 ? cursor.getLong(totalSizeIndex) : 0;
-                    
-                    Log.i(TAG, "Download status check - Status: " + status + ", Downloaded: " + bytesDownloaded + "/" + totalSize + " bytes");
-                    
-                    switch (status) {
-                        case DownloadManager.STATUS_PENDING:
-                            Log.i(TAG, "Download is pending...");
-                            runOnUiThread(() -> statusText.setText("Download pending..."));
-                            break;
-                        case DownloadManager.STATUS_RUNNING:
-                            Log.i(TAG, "Download is running...");
-                            runOnUiThread(() -> statusText.setText("Download in progress... " + bytesDownloaded + " bytes"));
-                            break;
-                        case DownloadManager.STATUS_SUCCESSFUL:
-                            Log.i(TAG, "Download completed successfully");
-                            break;
-                        case DownloadManager.STATUS_FAILED:
-                            int reason = reasonIndex >= 0 ? cursor.getInt(reasonIndex) : -1;
-                            String reasonStr = getDownloadFailureReason(reason);
-                            Log.e(TAG, "Download failed: " + reasonStr);
-                            runOnUiThread(() -> {
-                                statusText.setText("Download failed: " + reasonStr);
-                                saveAndInstallButton.setEnabled(true);
-                            });
-                            break;
-                        case DownloadManager.STATUS_PAUSED:
-                            Log.i(TAG, "Download is paused");
-                            runOnUiThread(() -> statusText.setText("Download paused..."));
-                            break;
-                        default:
-                            Log.w(TAG, "Unknown download status: " + status);
-                            break;
-                    }
-                }
-                cursor.close();
-            } else {
-                Log.e(TAG, "Could not query download status - download may have been removed");
-                runOnUiThread(() -> {
-                    statusText.setText("Error: Could not check download status");
-                    saveAndInstallButton.setEnabled(true);
-                });
-            }
-        }, 5000); // Check after 5 seconds
-    }
-
-    private BroadcastReceiver downloadReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
-            if (id == downloadId) {
-                // Check download status
-                DownloadManager downloadManager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+    private void checkDownloadStatusPeriodically(DownloadManager downloadManager, long downloadId) {
+        android.os.Handler handler = new android.os.Handler();
+        Runnable statusChecker = new Runnable() {
+            @Override
+            public void run() {
                 DownloadManager.Query query = new DownloadManager.Query();
                 query.setFilterById(downloadId);
                 
@@ -503,51 +464,62 @@ public class UpdateActivity extends Activity {
                 if (cursor != null && cursor.moveToFirst()) {
                     int statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
                     int reasonIndex = cursor.getColumnIndex(DownloadManager.COLUMN_REASON);
+                    int bytesDownloadedIndex = cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR);
+                    int totalSizeIndex = cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES);
                     
                     if (statusIndex >= 0) {
                         int status = cursor.getInt(statusIndex);
+                        long bytesDownloaded = bytesDownloadedIndex >= 0 ? cursor.getLong(bytesDownloadedIndex) : 0;
+                        long totalSize = totalSizeIndex >= 0 ? cursor.getLong(totalSizeIndex) : 0;
+                        
+                        Log.i(TAG, "Download status check - Status: " + status + ", Downloaded: " + bytesDownloaded + "/" + totalSize + " bytes");
                         
                         switch (status) {
+                            case DownloadManager.STATUS_PENDING:
+                                statusText.setText("Download pending...");
+                                handler.postDelayed(this, 2000); // Check again in 2 seconds
+                                break;
+                            case DownloadManager.STATUS_RUNNING:
+                                statusText.setText("Download in progress... " + (bytesDownloaded / 1024) + " KB");
+                                handler.postDelayed(this, 2000); // Check again in 2 seconds
+                                break;
                             case DownloadManager.STATUS_SUCCESSFUL:
-                                statusText.setText("Download completed. Installing...");
-                                installAPK();
+                                Log.i(TAG, "Download completed successfully - triggering installation");
+                                statusText.setText("Download completed! Starting installation...");
+                                // Give a brief moment for UI to update, then start installation
+                                handler.postDelayed(() -> installAPK(), 500);
                                 break;
-                                
                             case DownloadManager.STATUS_FAILED:
-                                String reason = "Unknown error";
-                                if (reasonIndex >= 0) {
-                                    int reasonCode = cursor.getInt(reasonIndex);
-                                    reason = getDownloadFailureReason(reasonCode);
-                                }
-                                
-                                String errorMsg = "Download failed: " + reason;
-                                Log.e(TAG, errorMsg + " (reason code: " + (reasonIndex >= 0 ? cursor.getInt(reasonIndex) : "unknown") + ")");
-                                statusText.setText(errorMsg);
+                                int reason = reasonIndex >= 0 ? cursor.getInt(reasonIndex) : -1;
+                                String reasonStr = getDownloadFailureReason(reason);
+                                Log.e(TAG, "Download failed: " + reasonStr);
+                                statusText.setText("Download failed: " + reasonStr);
                                 saveAndInstallButton.setEnabled(true);
-                                Toast.makeText(UpdateActivity.this, errorMsg, Toast.LENGTH_LONG).show();
                                 break;
-                                
+                            case DownloadManager.STATUS_PAUSED:
+                                statusText.setText("Download paused...");
+                                handler.postDelayed(this, 2000); // Check again in 2 seconds
+                                break;
                             default:
-                                Log.w(TAG, "Download completed with status: " + status);
-                                statusText.setText("Download completed with status: " + status);
-                                saveAndInstallButton.setEnabled(true);
+                                Log.w(TAG, "Unknown download status: " + status);
+                                statusText.setText("Download status: " + status);
+                                handler.postDelayed(this, 2000); // Check again in 2 seconds
                                 break;
                         }
-                    } else {
-                        Log.e(TAG, "Could not get download status");
-                        statusText.setText("Error: Could not check download status");
-                        saveAndInstallButton.setEnabled(true);
                     }
                     cursor.close();
                 } else {
-                    Log.e(TAG, "Could not query download status");
-                    statusText.setText("Error: Could not query download status");
+                    Log.e(TAG, "Could not query download status - download may have been removed");
+                    statusText.setText("Error: Could not check download status");
                     saveAndInstallButton.setEnabled(true);
                 }
             }
-        }
-    };
-    
+        };
+        
+        // Start checking after 2 seconds
+        handler.postDelayed(statusChecker, 2000);
+    }
+
     private String getDownloadFailureReason(int reasonCode) {
         switch (reasonCode) {
             case DownloadManager.ERROR_CANNOT_RESUME:
@@ -573,6 +545,57 @@ public class UpdateActivity extends Activity {
     }
 
     private void installAPK() {
+        // Show confirmation dialog before installation
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Install Update");
+        builder.setMessage("Ready to install the update. The app will close after starting the installation. Continue?");
+        builder.setPositiveButton("Install", (dialog, which) -> {
+            proceedWithInstallation();
+        });
+        builder.setNegativeButton("Cancel", (dialog, which) -> {
+            statusText.setText("Installation cancelled");
+            saveAndInstallButton.setEnabled(true);
+        });
+        builder.show();
+    }
+    
+    private void proceedWithInstallation() {
+        // Check if we have permission to install unknown apps (Android 8+)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            if (!getPackageManager().canRequestPackageInstalls()) {
+                Log.w(TAG, "App does not have permission to install unknown apps");
+                
+                // For Android TV, we'll show a more TV-friendly dialog
+                AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                builder.setTitle("Installation Permission Required");
+                builder.setMessage("This app needs permission to install updates. Please grant permission in the next screen, then return to try again.");
+                builder.setPositiveButton("Grant Permission", (dialog, which) -> {
+                    try {
+                        Intent intent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
+                        intent.setData(Uri.parse("package:" + getPackageName()));
+                        startActivityForResult(intent, 1000);
+                    } catch (Exception e) {
+                        Log.e(TAG, "Could not open install permission settings", e);
+                        // Fallback for Android TV - try general security settings
+                        try {
+                            Intent fallbackIntent = new Intent(Settings.ACTION_SECURITY_SETTINGS);
+                            startActivity(fallbackIntent);
+                            Toast.makeText(this, "Please enable 'Unknown sources' for this app", Toast.LENGTH_LONG).show();
+                        } catch (Exception e2) {
+                            Log.e(TAG, "Could not open security settings either", e2);
+                            statusText.setText("Please enable install permission in device settings");
+                        }
+                    }
+                });
+                builder.setNegativeButton("Cancel", (dialog, which) -> {
+                    statusText.setText("Installation cancelled - permission required");
+                    saveAndInstallButton.setEnabled(true);
+                });
+                builder.show();
+                return;
+            }
+        }
+        
         try {
             // Use the same location as download - app's external files directory
             File externalFilesDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
@@ -624,13 +647,21 @@ public class UpdateActivity extends Activity {
             
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
                 // Use FileProvider for Android 7+ (required for security)
-                Uri apkUri = androidx.core.content.FileProvider.getUriForFile(
-                    this, 
-                    "com.kidsim.tvkiosk.fileprovider", 
-                    apkFile
-                );
-                installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
-                installIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                try {
+                    Uri apkUri = androidx.core.content.FileProvider.getUriForFile(
+                        this, 
+                        "com.kidsim.tvkiosk.fileprovider", 
+                        apkFile
+                    );
+                    installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+                    installIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    
+                    Log.i(TAG, "Using FileProvider URI: " + apkUri.toString());
+                } catch (Exception e) {
+                    Log.e(TAG, "FileProvider failed, trying direct file URI", e);
+                    // Fallback to direct file URI for Android TV compatibility
+                    installIntent.setDataAndType(Uri.fromFile(apkFile), "application/vnd.android.package-archive");
+                }
             } else {
                 // Legacy approach for older Android versions
                 installIntent.setDataAndType(Uri.fromFile(apkFile), "application/vnd.android.package-archive");
@@ -640,10 +671,29 @@ public class UpdateActivity extends Activity {
             
             statusText.setText("Installing APK...");
             Log.i(TAG, "Starting APK installation for file: " + apkFile.getAbsolutePath());
-            startActivity(installIntent);
             
-            // Close this activity after starting installation
-            finish();
+            // Check if there's an activity that can handle the install intent
+            if (installIntent.resolveActivity(getPackageManager()) != null) {
+                
+                // Show final message to user
+                statusText.setText("Installation started. App will close now. Please follow the installation prompts.");
+                
+                // Start the installation
+                startActivity(installIntent);
+                
+                // Give user time to read the message, then close the app
+                new android.os.Handler().postDelayed(() -> {
+                    // Close this activity and the entire application
+                    finishAffinity(); // This closes all activities in the app
+                    System.exit(0);   // Fully terminate the app process
+                }, 2000); // Wait 2 seconds
+                
+            } else {
+                Log.e(TAG, "No activity found to handle APK installation intent");
+                statusText.setText("Error: Device cannot install APK files");
+                saveAndInstallButton.setEnabled(true);
+                Toast.makeText(this, "Device does not support APK installation", Toast.LENGTH_LONG).show();
+            }
             
         } catch (Exception e) {
             Log.e(TAG, "Error installing APK", e);
@@ -651,6 +701,27 @@ public class UpdateActivity extends Activity {
             statusText.setText(errorMsg);
             saveAndInstallButton.setEnabled(true);
             Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show();
+        }
+    }
+    
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        
+        if (requestCode == 1000) { // Install permission request
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                if (getPackageManager().canRequestPackageInstalls()) {
+                    Log.i(TAG, "Install permission granted, proceeding with installation");
+                    statusText.setText("Permission granted, installing APK...");
+                    // Retry installation now that we have permission
+                    proceedWithInstallation();
+                } else {
+                    Log.w(TAG, "Install permission denied");
+                    statusText.setText("Installation failed - permission denied");
+                    saveAndInstallButton.setEnabled(true);
+                    Toast.makeText(this, "Installation permission is required to update the app", Toast.LENGTH_LONG).show();
+                }
+            }
         }
     }
 }
