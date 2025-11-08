@@ -1,4 +1,4 @@
-# ===================================================================
+﻿# ===================================================================
 # KIDS Android TV Kiosk - Git Publish Debug
 # ===================================================================
 # This script builds and publishes a debug release to GitHub
@@ -111,11 +111,7 @@ if ($existingRelease) {
 
 # Create new debug release
 Write-Host "Creating new debug pre-release..." -ForegroundColor Cyan
-gh release create "debug" $debugApk `
-    --title "Debug Build" `
-    --notes "Latest debug build for testing. This is automatically updated with each debug publish." `
-    --prerelease `
-    --target test
+gh release create "debug" $debugApk --title "Debug Build" --notes "Latest debug build for testing. This is automatically updated with each debug publish." --prerelease --target test
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Error: Failed to create GitHub release" -ForegroundColor Red
@@ -124,71 +120,14 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host ""
 Write-Host "=== Debug Publish Complete ===" -ForegroundColor Green
-Write-Host "✓ Changes committed to test branch" -ForegroundColor Green
-Write-Host "✓ Debug APK built successfully" -ForegroundColor Green
-Write-Host "✓ Pushed to GitHub" -ForegroundColor Green
-Write-Host "✓ Debug pre-release created/updated" -ForegroundColor Green
+Write-Host "Changes committed to test branch" -ForegroundColor Green
+Write-Host "Debug APK built successfully" -ForegroundColor Green
+Write-Host "Pushed to GitHub" -ForegroundColor Green
+Write-Host "Debug pre-release created/updated" -ForegroundColor Green
 Write-Host ""
 Write-Host "Debug release available at: https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/tag/debug" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Cyan
 Write-Host "- Test the debug release on devices" -ForegroundColor White
 Write-Host "- When ready for production, run: .\_git_publish_release.ps1" -ForegroundColor White
-Write-Host ""
-
-# Clean up build files and add only source code
-Write-Host "Step 1: Cleaning build files..." -ForegroundColor Yellow
-git clean -fd .gradle/ app/build/ build/ 2>$null
-git reset HEAD . 2>$null
-
-Write-Host "Step 2: Adding source code changes..." -ForegroundColor Yellow
-# Add only source files, not build files
-git add .gitignore
-git add *.md
-git add *.json
-git add *.gradle
-git add *.properties
-git add *.bat
-git add *.ps1
-git add gradlew*
-git add "app/src/"
-git add "gradle/"
-
-# Show what we're about to commit
-Write-Host ""
-Write-Host "Files to be committed:" -ForegroundColor Cyan
-git diff --cached --name-only | ForEach-Object { Write-Host "  + $_" -ForegroundColor Green }
-
-Write-Host ""
-$confirm = Read-Host "Continue with commit? (y/N)"
-if ($confirm -ne "y" -and $confirm -ne "Y") {
-    Write-Host "Cancelled by user" -ForegroundColor Yellow
-    exit 0
-}
-
-Write-Host ""
-Write-Host "Step 3: Committing changes..." -ForegroundColor Yellow
-git commit -m "$Message"
-
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Error: Failed to commit changes" -ForegroundColor Red
-    exit 1
-}
-
-Write-Host "Step 4: Pushing to GitHub..." -ForegroundColor Yellow
-git push origin test
-
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Error: Failed to push to GitHub" -ForegroundColor Red
-    exit 1
-}
-
-Write-Host ""
-Write-Host "=== Debug Publish Complete ===" -ForegroundColor Green
-Write-Host "✓ Changes committed to test branch" -ForegroundColor Green
-Write-Host "✓ Pushed to GitHub" -ForegroundColor Green
-Write-Host ""
-Write-Host "Next steps:" -ForegroundColor Cyan
-Write-Host "- Test your changes on the test branch" -ForegroundColor White
-Write-Host "- When ready for production, run: .\git_publish_release.ps1" -ForegroundColor White
 Write-Host ""
