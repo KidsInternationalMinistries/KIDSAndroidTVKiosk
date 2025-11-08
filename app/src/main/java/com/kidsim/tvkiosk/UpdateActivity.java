@@ -44,13 +44,17 @@ import org.json.JSONObject;
 public class UpdateActivity extends Activity {
     private static final String TAG = "UpdateActivity";
     
-    // GitHub API URL to get latest release information
+    // GitHub API URLs to get release information
     private static final String GITHUB_RELEASES_API_URL = 
+        "https://api.github.com/repos/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases";
+    private static final String GITHUB_LATEST_RELEASE_API_URL = 
         "https://api.github.com/repos/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/latest";
     
-    // Fallback URLs in case API fails (pointing to known working release)
-    private static final String FALLBACK_APK_URL = 
-        "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/download/v1.0-test/app-test.apk";
+    // Fallback URLs in case API fails
+    private static final String FALLBACK_RELEASE_APK_URL = 
+        "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/download/v1.3/app-release.apk";
+    private static final String FALLBACK_DEBUG_APK_URL = 
+        "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/download/v2.0-debug/app-debug.apk";
     
     private SharedPreferences preferences;
     private DeviceIdManager deviceIdManager;
@@ -323,34 +327,38 @@ public class UpdateActivity extends Activity {
                 Log.i(TAG, "Starting GitHub API call in background thread...");
                 runOnUiThread(() -> statusText.setText("Contacting GitHub API..."));
                 
-                String downloadUrl = getLatestReleaseDownloadUrl();
+                String downloadUrl = getReleaseDownloadUrl(buildType);
                 
                 // Switch back to UI thread to start download
                 runOnUiThread(() -> {
                     if (downloadUrl != null) {
-                        Log.i(TAG, "Found latest release URL: " + downloadUrl);
-                        statusText.setText("Found latest release, starting download...");
+                        Log.i(TAG, "Found " + buildType + " release URL: " + downloadUrl);
+                        statusText.setText("Found " + buildType.toLowerCase() + " release, starting download...");
                         startDownload(downloadUrl, buildType);
                     } else {
-                        Log.w(TAG, "Could not get latest release URL, using fallback");
-                        startDownload(FALLBACK_APK_URL, buildType);
+                        Log.w(TAG, "Could not get " + buildType + " release URL, using fallback");
+                        String fallbackUrl = buildType.equals("Debug") ? FALLBACK_DEBUG_APK_URL : FALLBACK_RELEASE_APK_URL;
+                        startDownload(fallbackUrl, buildType);
                     }
                 });
                 
             } catch (Exception e) {
-                Log.e(TAG, "Error getting latest release URL", e);
+                Log.e(TAG, "Error getting " + buildType + " release URL", e);
                 runOnUiThread(() -> {
                     Log.w(TAG, "Using fallback URL due to error: " + e.getMessage());
-                    startDownload(FALLBACK_APK_URL, buildType);
+                    String fallbackUrl = buildType.equals("Debug") ? FALLBACK_DEBUG_APK_URL : FALLBACK_RELEASE_APK_URL;
+                    startDownload(fallbackUrl, buildType);
                 });
             }
         });
     }
     
-    private String getLatestReleaseDownloadUrl() {
+    private String getReleaseDownloadUrl(String buildType) {
         try {
-            Log.i(TAG, "Fetching latest release from GitHub API...");
-            URL url = new URL(GITHUB_RELEASES_API_URL);
+            String apiUrl = buildType.equals("Release") ? GITHUB_LATEST_RELEASE_API_URL : GITHUB_RELEASES_API_URL;
+            Log.i(TAG, "Fetching " + buildType + " release from GitHub API: " + apiUrl);
+            
+            URL url = new URL(apiUrl);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
             connection.setRequestProperty("Accept", "application/vnd.github.v3+json");
@@ -370,27 +378,14 @@ public class UpdateActivity extends Activity {
                 }
                 reader.close();
                 
-                // Parse JSON response
-                JSONObject releaseData = new JSONObject(response.toString());
-                String tagName = releaseData.getString("tag_name");
-                Log.i(TAG, "Latest release tag: " + tagName);
-                
-                // Look for APK asset in the assets array
-                JSONArray assets = releaseData.getJSONArray("assets");
-                for (int i = 0; i < assets.length(); i++) {
-                    JSONObject asset = assets.getJSONObject(i);
-                    String assetName = asset.getString("name");
-                    
-                    // Look for APK files (app-test.apk, app-release.apk, app-debug.apk, etc.)
-                    if (assetName.toLowerCase().endsWith(".apk")) {
-                        String downloadUrl = asset.getString("browser_download_url");
-                        Log.i(TAG, "Found APK asset: " + assetName + " -> " + downloadUrl);
-                        return downloadUrl;
-                    }
+                if (buildType.equals("Release")) {
+                    // For Release builds, use latest release API (returns single release object)
+                    return parseReleaseForApk(new JSONObject(response.toString()), buildType);
+                } else {
+                    // For Debug builds, use releases API (returns array) and find latest debug/pre-release
+                    JSONArray releases = new JSONArray(response.toString());
+                    return findDebugReleaseApk(releases);
                 }
-                
-                Log.w(TAG, "No APK assets found in latest release");
-                return null;
                 
             } else {
                 Log.e(TAG, "GitHub API request failed with code: " + responseCode);
@@ -398,7 +393,116 @@ public class UpdateActivity extends Activity {
             }
             
         } catch (Exception e) {
-            Log.e(TAG, "Error fetching latest release", e);
+            Log.e(TAG, "Error fetching " + buildType + " release", e);
+            return null;
+        }
+    }
+    
+    private String parseReleaseForApk(JSONObject releaseData, String buildType) {
+        try {
+            String tagName = releaseData.getString("tag_name");
+            Log.i(TAG, buildType + " release tag: " + tagName);
+            
+            // Look for APK asset in the assets array
+            JSONArray assets = releaseData.getJSONArray("assets");
+            for (int i = 0; i < assets.length(); i++) {
+                JSONObject asset = assets.getJSONObject(i);
+                String assetName = asset.getString("name");
+                
+                // For Release builds, prefer app-release.apk, otherwise any APK
+                if (assetName.toLowerCase().endsWith(".apk")) {
+                    if (buildType.equals("Release")) {
+                        // Prefer release APKs for release builds
+                        if (assetName.toLowerCase().contains("release") || 
+                            (!assetName.toLowerCase().contains("debug") && !assetName.toLowerCase().contains("test"))) {
+                            String downloadUrl = asset.getString("browser_download_url");
+                            Log.i(TAG, "Found " + buildType + " APK asset: " + assetName + " -> " + downloadUrl);
+                            return downloadUrl;
+                        }
+                    } else {
+                        // For non-release builds, take first APK found
+                        String downloadUrl = asset.getString("browser_download_url");
+                        Log.i(TAG, "Found " + buildType + " APK asset: " + assetName + " -> " + downloadUrl);
+                        return downloadUrl;
+                    }
+                }
+            }
+            
+            Log.w(TAG, "No suitable APK assets found in " + buildType + " release");
+            return null;
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error parsing " + buildType + " release data", e);
+            return null;
+        }
+    }
+    
+    private String findDebugReleaseApk(JSONArray releases) {
+        try {
+            // Look through releases to find the latest debug/pre-release
+            for (int i = 0; i < releases.length(); i++) {
+                JSONObject release = releases.getJSONObject(i);
+                String tagName = release.getString("tag_name");
+                boolean isPrerelease = release.optBoolean("prerelease", false);
+                boolean isDraft = release.optBoolean("draft", false);
+                
+                // Skip drafts
+                if (isDraft) {
+                    continue;
+                }
+                
+                // Look for debug releases (pre-releases or tags containing "debug")
+                if (isPrerelease || tagName.toLowerCase().contains("debug")) {
+                    Log.i(TAG, "Found debug release candidate: " + tagName + " (prerelease: " + isPrerelease + ")");
+                    
+                    JSONArray assets = release.getJSONArray("assets");
+                    for (int j = 0; j < assets.length(); j++) {
+                        JSONObject asset = assets.getJSONObject(j);
+                        String assetName = asset.getString("name");
+                        
+                        // Look for debug APKs first, then any APK
+                        if (assetName.toLowerCase().endsWith(".apk")) {
+                            if (assetName.toLowerCase().contains("debug") || 
+                                assetName.toLowerCase().contains("test") ||
+                                !assetName.toLowerCase().contains("release")) {
+                                String downloadUrl = asset.getString("browser_download_url");
+                                Log.i(TAG, "Found Debug APK asset: " + assetName + " -> " + downloadUrl);
+                                return downloadUrl;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            Log.w(TAG, "No debug releases found, trying any recent release with debug APK");
+            
+            // Fallback: look for any recent release that has a debug APK
+            for (int i = 0; i < Math.min(5, releases.length()); i++) {
+                JSONObject release = releases.getJSONObject(i);
+                String tagName = release.getString("tag_name");
+                boolean isDraft = release.optBoolean("draft", false);
+                
+                if (isDraft) continue;
+                
+                JSONArray assets = release.getJSONArray("assets");
+                for (int j = 0; j < assets.length(); j++) {
+                    JSONObject asset = assets.getJSONObject(j);
+                    String assetName = asset.getString("name");
+                    
+                    if (assetName.toLowerCase().endsWith(".apk") && 
+                        (assetName.toLowerCase().contains("debug") || assetName.toLowerCase().contains("test"))) {
+                        String downloadUrl = asset.getString("browser_download_url");
+                        Log.i(TAG, "Found Debug APK in release " + tagName + ": " + assetName + " -> " + downloadUrl);
+                        return downloadUrl;
+                    }
+                }
+            }
+            
+            Log.w(TAG, "No debug APK found in recent releases");
+            return null;
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error finding debug release", e);
             return null;
         }
     }
