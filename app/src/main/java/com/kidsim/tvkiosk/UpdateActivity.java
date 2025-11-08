@@ -37,11 +37,11 @@ public class UpdateActivity extends Activity {
     private static final String TAG = "UpdateActivity";
     
     // GitHub URLs for APK downloads
-    // Note: These URLs point to GitHub Releases where APK files are uploaded
+    // Note: These URLs point to the specific release version with actual APK files
     private static final String GITHUB_DEBUG_APK_URL = 
-        "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/latest/download/app-test.apk";
+        "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/download/v1.0-test/app-test.apk";
     private static final String GITHUB_RELEASE_APK_URL = 
-        "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/latest/download/app-test.apk";
+        "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/download/v1.0-test/app-test.apk";
     
     private SharedPreferences preferences;
     private DeviceIdManager deviceIdManager;
@@ -259,10 +259,14 @@ public class UpdateActivity extends Activity {
     }
     
     private void saveAndInstall() {
+        Log.i(TAG, "saveAndInstall() called - Save and Install button clicked");
+        
         // Get selected values
         String buildType = buildTypeSpinner.getSelectedItem().toString();
         String orientation = orientationSpinner.getSelectedItem().toString();
         String deviceId = deviceIdSpinner.getSelectedItem().toString();
+        
+        Log.i(TAG, "Selected values - BuildType: " + buildType + ", Orientation: " + orientation + ", DeviceId: " + deviceId);
         
         // Save preferences
         SharedPreferences.Editor editor = preferences.edit();
@@ -324,6 +328,9 @@ public class UpdateActivity extends Activity {
             downloadId = downloadManager.enqueue(request);
             Log.i(TAG, "Download started with ID: " + downloadId);
             
+            // Start a timer to check download status periodically
+            checkDownloadStatus(downloadManager, downloadId);
+            
         } catch (Exception e) {
             Log.e(TAG, "Error starting download", e);
             statusText.setText("Error starting download: " + e.getMessage());
@@ -332,6 +339,67 @@ public class UpdateActivity extends Activity {
         }
     }
     
+    private void checkDownloadStatus(DownloadManager downloadManager, long downloadId) {
+        // Check status after 5 seconds to see what's happening
+        new android.os.Handler().postDelayed(() -> {
+            DownloadManager.Query query = new DownloadManager.Query();
+            query.setFilterById(downloadId);
+            
+            android.database.Cursor cursor = downloadManager.query(query);
+            if (cursor != null && cursor.moveToFirst()) {
+                int statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
+                int reasonIndex = cursor.getColumnIndex(DownloadManager.COLUMN_REASON);
+                int bytesDownloadedIndex = cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR);
+                int totalSizeIndex = cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES);
+                
+                if (statusIndex >= 0) {
+                    int status = cursor.getInt(statusIndex);
+                    long bytesDownloaded = bytesDownloadedIndex >= 0 ? cursor.getLong(bytesDownloadedIndex) : 0;
+                    long totalSize = totalSizeIndex >= 0 ? cursor.getLong(totalSizeIndex) : 0;
+                    
+                    Log.i(TAG, "Download status check - Status: " + status + ", Downloaded: " + bytesDownloaded + "/" + totalSize + " bytes");
+                    
+                    switch (status) {
+                        case DownloadManager.STATUS_PENDING:
+                            Log.i(TAG, "Download is pending...");
+                            runOnUiThread(() -> statusText.setText("Download pending..."));
+                            break;
+                        case DownloadManager.STATUS_RUNNING:
+                            Log.i(TAG, "Download is running...");
+                            runOnUiThread(() -> statusText.setText("Download in progress... " + bytesDownloaded + " bytes"));
+                            break;
+                        case DownloadManager.STATUS_SUCCESSFUL:
+                            Log.i(TAG, "Download completed successfully");
+                            break;
+                        case DownloadManager.STATUS_FAILED:
+                            int reason = reasonIndex >= 0 ? cursor.getInt(reasonIndex) : -1;
+                            String reasonStr = getDownloadFailureReason(reason);
+                            Log.e(TAG, "Download failed: " + reasonStr);
+                            runOnUiThread(() -> {
+                                statusText.setText("Download failed: " + reasonStr);
+                                saveAndInstallButton.setEnabled(true);
+                            });
+                            break;
+                        case DownloadManager.STATUS_PAUSED:
+                            Log.i(TAG, "Download is paused");
+                            runOnUiThread(() -> statusText.setText("Download paused..."));
+                            break;
+                        default:
+                            Log.w(TAG, "Unknown download status: " + status);
+                            break;
+                    }
+                }
+                cursor.close();
+            } else {
+                Log.e(TAG, "Could not query download status - download may have been removed");
+                runOnUiThread(() -> {
+                    statusText.setText("Error: Could not check download status");
+                    saveAndInstallButton.setEnabled(true);
+                });
+            }
+        }, 5000); // Check after 5 seconds
+    }
+
     private BroadcastReceiver downloadReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
