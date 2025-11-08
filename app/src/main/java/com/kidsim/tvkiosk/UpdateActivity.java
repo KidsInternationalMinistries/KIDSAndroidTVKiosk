@@ -37,10 +37,11 @@ public class UpdateActivity extends Activity {
     private static final String TAG = "UpdateActivity";
     
     // GitHub URLs for APK downloads
+    // Note: These URLs point to GitHub Releases where APK files should be uploaded
     private static final String GITHUB_DEBUG_APK_URL = 
-        "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/raw/main/app/build/outputs/apk/debug/app-debug.apk";
+        "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/latest/download/app-debug.apk";
     private static final String GITHUB_RELEASE_APK_URL = 
-        "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/raw/main/app/build/outputs/apk/release/app-release.apk";
+        "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/latest/download/app-release.apk";
     
     private SharedPreferences preferences;
     private DeviceIdManager deviceIdManager;
@@ -291,15 +292,28 @@ public class UpdateActivity extends Activity {
         try {
             DownloadManager downloadManager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
             
+            if (downloadManager == null) {
+                throw new Exception("DownloadManager service not available");
+            }
+            
             Uri downloadUri = Uri.parse(apkUrl);
             DownloadManager.Request request = new DownloadManager.Request(downloadUri);
             
+            // Check if external storage is available
+            if (!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
+                throw new Exception("External storage not available");
+            }
+            
             request.setTitle("Kiosk App Update");
-            request.setDescription("Downloading " + buildType + " version");
+            request.setDescription("Downloading " + buildType + " version from GitHub");
             request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "kiosk-update.apk");
             request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+            request.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI | DownloadManager.Request.NETWORK_MOBILE);
+            request.setAllowedOverRoaming(false);
             
+            Log.i(TAG, "Starting download from URL: " + apkUrl);
             downloadId = downloadManager.enqueue(request);
+            Log.i(TAG, "Download started with ID: " + downloadId);
             
         } catch (Exception e) {
             Log.e(TAG, "Error starting download", e);
@@ -314,20 +328,118 @@ public class UpdateActivity extends Activity {
         public void onReceive(Context context, Intent intent) {
             long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
             if (id == downloadId) {
-                statusText.setText("Download completed. Installing...");
-                installAPK();
+                // Check download status
+                DownloadManager downloadManager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+                DownloadManager.Query query = new DownloadManager.Query();
+                query.setFilterById(downloadId);
+                
+                android.database.Cursor cursor = downloadManager.query(query);
+                if (cursor != null && cursor.moveToFirst()) {
+                    int statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
+                    int reasonIndex = cursor.getColumnIndex(DownloadManager.COLUMN_REASON);
+                    
+                    if (statusIndex >= 0) {
+                        int status = cursor.getInt(statusIndex);
+                        
+                        switch (status) {
+                            case DownloadManager.STATUS_SUCCESSFUL:
+                                statusText.setText("Download completed. Installing...");
+                                installAPK();
+                                break;
+                                
+                            case DownloadManager.STATUS_FAILED:
+                                String reason = "Unknown error";
+                                if (reasonIndex >= 0) {
+                                    int reasonCode = cursor.getInt(reasonIndex);
+                                    reason = getDownloadFailureReason(reasonCode);
+                                }
+                                
+                                String errorMsg = "Download failed: " + reason;
+                                Log.e(TAG, errorMsg + " (reason code: " + (reasonIndex >= 0 ? cursor.getInt(reasonIndex) : "unknown") + ")");
+                                statusText.setText(errorMsg);
+                                saveAndInstallButton.setEnabled(true);
+                                Toast.makeText(UpdateActivity.this, errorMsg, Toast.LENGTH_LONG).show();
+                                break;
+                                
+                            default:
+                                Log.w(TAG, "Download completed with status: " + status);
+                                statusText.setText("Download completed with status: " + status);
+                                saveAndInstallButton.setEnabled(true);
+                                break;
+                        }
+                    } else {
+                        Log.e(TAG, "Could not get download status");
+                        statusText.setText("Error: Could not check download status");
+                        saveAndInstallButton.setEnabled(true);
+                    }
+                    cursor.close();
+                } else {
+                    Log.e(TAG, "Could not query download status");
+                    statusText.setText("Error: Could not query download status");
+                    saveAndInstallButton.setEnabled(true);
+                }
             }
         }
     };
     
+    private String getDownloadFailureReason(int reasonCode) {
+        switch (reasonCode) {
+            case DownloadManager.ERROR_CANNOT_RESUME:
+                return "Cannot resume download";
+            case DownloadManager.ERROR_DEVICE_NOT_FOUND:
+                return "Storage device not found";
+            case DownloadManager.ERROR_FILE_ALREADY_EXISTS:
+                return "File already exists";
+            case DownloadManager.ERROR_FILE_ERROR:
+                return "Storage error";
+            case DownloadManager.ERROR_HTTP_DATA_ERROR:
+                return "HTTP data error";
+            case DownloadManager.ERROR_INSUFFICIENT_SPACE:
+                return "Insufficient storage space";
+            case DownloadManager.ERROR_TOO_MANY_REDIRECTS:
+                return "Too many redirects";
+            case DownloadManager.ERROR_UNHANDLED_HTTP_CODE:
+                return "Unhandled HTTP error";
+            case DownloadManager.ERROR_UNKNOWN:
+            default:
+                return "Unknown error (code: " + reasonCode + ")";
+        }
+    }
+
     private void installAPK() {
         try {
             File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
             File apkFile = new File(downloadDir, "kiosk-update.apk");
             
+            Log.i(TAG, "Checking for APK file at: " + apkFile.getAbsolutePath());
+            
             if (!apkFile.exists()) {
-                statusText.setText("Error: Downloaded APK not found");
+                String errorMsg = "Error: Downloaded APK not found at " + apkFile.getAbsolutePath();
+                Log.e(TAG, errorMsg);
+                statusText.setText(errorMsg);
                 saveAndInstallButton.setEnabled(true);
+                Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show();
+                return;
+            }
+            
+            if (!apkFile.canRead()) {
+                String errorMsg = "Error: Cannot read APK file (permission issue)";
+                Log.e(TAG, errorMsg);
+                statusText.setText(errorMsg);
+                saveAndInstallButton.setEnabled(true);
+                Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show();
+                return;
+            }
+            
+            long fileSize = apkFile.length();
+            Log.i(TAG, "APK file size: " + fileSize + " bytes");
+            
+            if (fileSize < 1000) { // Less than 1KB probably indicates an error page
+                String errorMsg = "Error: APK file too small (" + fileSize + " bytes) - likely download failed";
+                Log.e(TAG, errorMsg);
+                statusText.setText(errorMsg);
+                saveAndInstallButton.setEnabled(true);
+                Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show();
                 return;
             }
             
@@ -337,6 +449,7 @@ public class UpdateActivity extends Activity {
             installIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             
             statusText.setText("Installing APK...");
+            Log.i(TAG, "Starting APK installation for file: " + apkFile.getAbsolutePath());
             startActivity(installIntent);
             
             // Close this activity after starting installation
@@ -344,9 +457,10 @@ public class UpdateActivity extends Activity {
             
         } catch (Exception e) {
             Log.e(TAG, "Error installing APK", e);
-            statusText.setText("Error installing APK: " + e.getMessage());
+            String errorMsg = "Error installing APK: " + e.getMessage();
+            statusText.setText(errorMsg);
             saveAndInstallButton.setEnabled(true);
-            Toast.makeText(this, "Installation failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show();
         }
     }
 }
