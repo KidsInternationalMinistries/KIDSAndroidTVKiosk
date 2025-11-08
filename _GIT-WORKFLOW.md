@@ -53,19 +53,19 @@ This unified script handles both debug and release publishing. You can specify t
 **Usage:**
 ```powershell
 # Direct release with custom message (version auto-detected from build.gradle)
-.\_git_publish.ps1 release -Message "Release v1.3 with new features"
+.\_publish.ps1 release -Message "Release v1.3 with new features"
 
 # Interactive mode (will ask for debug/release choice)
-.\_git_publish.ps1
+.\_publish.ps1
 ```
 
 ## Typical Development Cycle
 
 1. **Make changes** to your code
 2. **Test locally** using `.\_debug_install.ps1`
-3. **Publish for testing** using `.\_git_publish.ps1 debug`
+3. **Publish for testing** using `.\_publish.ps1 debug`
 4. **Continue development** or fix issues on `test` branch
-5. **When ready for production** use `.\_git_publish.ps1 release`
+5. **When ready for production** use `.\_publish.ps1 release`
 
 ## Examples
 
@@ -76,7 +76,7 @@ This unified script handles both debug and release publishing. You can specify t
 .\_debug_install.ps1
 
 # Commit and backup to GitHub
-.\_git_publish.ps1 debug -Message "Added new configuration screen"
+.\_publish.ps1 debug -Message "Added new configuration screen"
 
 # Continue working...
 ```
