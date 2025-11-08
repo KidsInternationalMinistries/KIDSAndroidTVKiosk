@@ -87,13 +87,13 @@ This unified script handles both debug and release publishing. You can specify t
 .\_debug_install.ps1
 
 # Final commit
-.\_git_publish.ps1 debug -Message "Final testing complete for v1.3"
+.\_publish.ps1 debug -Message "Final testing complete for v1.3"
 
 # Update version in build.gradle (if needed)
 .\_bump_version.ps1
 
 # Create production release
-.\_git_publish.ps1 release -Message "Added device configuration and Google Sheets integration"
+.\_publish.ps1 release -Message "Added device configuration and Google Sheets integration"
 ```
 
 ## Tips

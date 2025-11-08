@@ -231,6 +231,10 @@ if ($isPrerelease) {
 }
 if ($BuildType -eq "debug") {
     $releaseArgs += "--target", $currentBranch
+    # Debug builds: Only include APK, no source code (current behavior is correct)
+} else {
+    # Release builds: Should include source code for proper versioning
+    # We can add this if needed, but let's first test current behavior
 }
 
 gh release create @releaseArgs
