@@ -118,8 +118,19 @@ public class UpdateActivity extends Activity {
         // Start with button disabled until all selections are made
         saveAndInstallButton.setEnabled(false);
         
+        // Set button text based on app type
+        updateButtonText();
+        
         // Display current version
         displayCurrentVersion();
+    }
+    
+    private void updateButtonText() {
+        if (isDebugApp()) {
+            saveAndInstallButton.setText("Download Debug Update");
+        } else {
+            saveAndInstallButton.setText("Download Release Update");
+        }
     }
     
     private void displayCurrentVersion() {
@@ -134,27 +145,30 @@ public class UpdateActivity extends Activity {
     }
     
     private void setupSpinners() {
-        // Build Type Spinner
+        // Simple approach: Show what type of app this is, no dropdown selection
         List<String> buildTypes = new ArrayList<>();
+        List<String> orientations = new ArrayList<>();
         
-        // Debug app can only update to debug versions
-        // Production app can install both: Release (update itself) or Debug (install debug app)
+        // Each app knows what it is - no selection needed
         if (isDebugApp()) {
             buildTypes.add("Debug");
+            statusText.setText("Debug app - will update to latest debug version");
         } else {
             buildTypes.add("Release");
-            buildTypes.add("Debug");
+            statusText.setText("Release app - will update to latest release version");
         }
         
+        // Keep orientation selection
+        orientations.add("Landscape");
+        orientations.add("Portrait");
+        
+        // Set up adapters (build type is now read-only)
         ArrayAdapter<String> buildAdapter = new ArrayAdapter<>(this, 
             R.layout.spinner_item, buildTypes);
         buildAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item);
         buildTypeSpinner.setAdapter(buildAdapter);
+        buildTypeSpinner.setEnabled(false); // Make it read-only
         
-        // Orientation Spinner
-        List<String> orientations = new ArrayList<>();
-        orientations.add("Landscape");
-        orientations.add("Portrait");
         ArrayAdapter<String> orientationAdapter = new ArrayAdapter<>(this, 
             R.layout.spinner_item, orientations);
         orientationAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item);
@@ -165,14 +179,7 @@ public class UpdateActivity extends Activity {
     }
     
     private void loadSavedPreferences() {
-        // Load saved build type (default: Release)
-        String savedBuildType = preferences.getString("buildType", "Release");
-        for (int i = 0; i < buildTypeSpinner.getCount(); i++) {
-            if (buildTypeSpinner.getItemAtPosition(i).toString().equals(savedBuildType)) {
-                buildTypeSpinner.setSelection(i);
-                break;
-            }
-        }
+        // Build type is now automatic based on app type, so only load orientation
         
         // Load saved orientation (default: Landscape)
         String savedOrientation = preferences.getString("orientation", "Landscape");
@@ -279,8 +286,8 @@ public class UpdateActivity extends Activity {
     }
     
     private void checkAllSelectionsValid() {
+        // Build type is automatic, just check orientation and device ID
         boolean hasValidSelections = 
-            buildTypeSpinner.getSelectedItem() != null &&
             orientationSpinner.getSelectedItem() != null &&
             deviceIdSpinner.getSelectedItem() != null &&
             !deviceIdSpinner.getSelectedItem().toString().isEmpty();
@@ -290,8 +297,9 @@ public class UpdateActivity extends Activity {
         // Make sure the button visual state updates properly
         saveAndInstallButton.refreshDrawableState();
         
+        String appType = isDebugApp() ? "Debug" : "Release";
         Log.d(TAG, "Button enabled: " + hasValidSelections + 
-               " (BuildType: " + (buildTypeSpinner.getSelectedItem() != null ? buildTypeSpinner.getSelectedItem().toString() : "null") +
+               " (App Type: " + appType + " (auto)" +
                ", Orientation: " + (orientationSpinner.getSelectedItem() != null ? orientationSpinner.getSelectedItem().toString() : "null") +
                ", DeviceId: " + (deviceIdSpinner.getSelectedItem() != null ? deviceIdSpinner.getSelectedItem().toString() : "null") + ")");
     }
@@ -300,16 +308,13 @@ public class UpdateActivity extends Activity {
         Log.i(TAG, "saveAndInstall() called - Save and Install button clicked");
         
         // Get selected values
-        String buildType = buildTypeSpinner.getSelectedItem().toString();
         String orientation = orientationSpinner.getSelectedItem().toString();
         String deviceId = deviceIdSpinner.getSelectedItem().toString();
         
-        // Debug app can only install debug versions
-        if (isDebugApp()) {
-            buildType = "Debug";
-        }
+        // App automatically knows its build type
+        String buildType = isDebugApp() ? "Debug" : "Release";
         
-        Log.i(TAG, "Selected values - BuildType: " + buildType + ", Orientation: " + orientation + ", DeviceId: " + deviceId);
+        Log.i(TAG, "Selected values - BuildType: " + buildType + " (auto-detected), Orientation: " + orientation + ", DeviceId: " + deviceId);
         
         // Save preferences
         SharedPreferences.Editor editor = preferences.edit();
@@ -777,29 +782,79 @@ public class UpdateActivity extends Activity {
                 return;
             }
             
-            // Install APK using FileProvider for Android 11+ compatibility
+            // Install APK using a multi-step approach for maximum compatibility
             Intent installIntent = new Intent(Intent.ACTION_VIEW);
+            Uri apkUri = null;
             
+            // Strategy 1: Try FileProvider first (most secure)
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-                // Use FileProvider for Android 7+ (required for security)
                 try {
-                    Uri apkUri = androidx.core.content.FileProvider.getUriForFile(
+                    apkUri = androidx.core.content.FileProvider.getUriForFile(
                         this, 
                         getFileProviderAuthority(), 
                         apkFile
                     );
                     installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
                     installIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    installIntent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
                     
-                    Log.i(TAG, "Using FileProvider URI: " + apkUri.toString());
+                    Log.i(TAG, "Strategy 1: Using FileProvider URI: " + apkUri.toString());
+                    Log.i(TAG, "FileProvider authority: " + getFileProviderAuthority());
+                    
+                    // Test if this intent can be resolved
+                    if (installIntent.resolveActivity(getPackageManager()) != null) {
+                        Log.i(TAG, "FileProvider intent can be resolved, proceeding");
+                    } else {
+                        Log.w(TAG, "FileProvider intent cannot be resolved, trying fallback");
+                        throw new Exception("FileProvider intent not resolvable");
+                    }
+                    
                 } catch (Exception e) {
-                    Log.e(TAG, "FileProvider failed, trying direct file URI", e);
-                    // Fallback to direct file URI for Android TV compatibility
-                    installIntent.setDataAndType(Uri.fromFile(apkFile), "application/vnd.android.package-archive");
+                    Log.e(TAG, "Strategy 1 failed: " + e.getMessage(), e);
+                    
+                    // Strategy 2: Copy to public downloads and use direct file URI
+                    try {
+                        File downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+                        if (!downloadsDir.exists()) {
+                            downloadsDir.mkdirs();
+                        }
+                        
+                        File publicApk = new File(downloadsDir, "kiosk-update-" + System.currentTimeMillis() + ".apk");
+                        
+                        // Copy APK to public location
+                        java.io.FileInputStream fis = new java.io.FileInputStream(apkFile);
+                        java.io.FileOutputStream fos = new java.io.FileOutputStream(publicApk);
+                        byte[] buffer = new byte[1024];
+                        int length;
+                        while ((length = fis.read(buffer)) > 0) {
+                            fos.write(buffer, 0, length);
+                        }
+                        fis.close();
+                        fos.close();
+                        
+                        // Make file readable
+                        publicApk.setReadable(true, false);
+                        
+                        apkUri = Uri.fromFile(publicApk);
+                        installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+                        
+                        Log.i(TAG, "Strategy 2: Copied APK to public location: " + publicApk.getAbsolutePath());
+                        Log.i(TAG, "Using file URI: " + apkUri.toString());
+                        
+                    } catch (Exception e2) {
+                        Log.e(TAG, "Strategy 2 failed: " + e2.getMessage(), e2);
+                        
+                        // Strategy 3: Last resort - direct file URI from original location
+                        apkUri = Uri.fromFile(apkFile);
+                        installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+                        Log.i(TAG, "Strategy 3: Using direct file URI: " + apkUri.toString());
+                    }
                 }
             } else {
-                // Legacy approach for older Android versions
-                installIntent.setDataAndType(Uri.fromFile(apkFile), "application/vnd.android.package-archive");
+                // For older Android versions, use direct file URI
+                apkUri = Uri.fromFile(apkFile);
+                installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+                Log.i(TAG, "Legacy: Using direct file URI for older Android: " + apkUri.toString());
             }
             
             installIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);

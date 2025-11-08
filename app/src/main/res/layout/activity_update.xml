@@ -101,7 +101,7 @@
         android:id="@+id/saveAndInstallButton"
         android:layout_width="match_parent"
         android:layout_height="60dp"
-        android:text="Save and Install"
+        android:text="Download and Install Update"
         android:textSize="20sp"
         android:textStyle="bold"
         android:textColor="#ffffff"
