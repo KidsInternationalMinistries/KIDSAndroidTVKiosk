@@ -36,6 +36,7 @@ public class ConfigurationManager {
     private ExecutorService executor;
     private ConfigUpdateListener listener;
     private GoogleSheetsConfigLoader sheetsLoader;
+    private DeviceIdManager deviceIdManager;
     
     public interface ConfigUpdateListener {
         void onConfigUpdated(DeviceConfig config);
@@ -46,6 +47,7 @@ public class ConfigurationManager {
         this.context = context;
         this.prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         this.executor = Executors.newSingleThreadExecutor();
+        this.deviceIdManager = new DeviceIdManager(context);
     }
     
     public void setConfigUpdateListener(ConfigUpdateListener listener) {
@@ -114,12 +116,29 @@ public class ConfigurationManager {
     
     private void loadConfigFromGoogleSheets(JSONObject baseConfig) {
         try {
-            String sheetsBaseUrl = baseConfig.getString("googleSheetsBaseUrl");
-            String deviceId = getDeviceName(); // Use device name for sheet matching
+            // Get device ID from DeviceIdManager first, fallback to device name
+            String tempDeviceId = deviceIdManager.getDeviceId();
+            final String deviceId;
+            if (tempDeviceId == null || tempDeviceId.isEmpty()) {
+                deviceId = getDeviceName(); // Fallback to device name for sheet matching
+                Log.i(TAG, "No configured device ID, using device name: " + deviceId);
+            } else {
+                deviceId = tempDeviceId;
+                Log.i(TAG, "Using configured device ID: " + deviceId);
+            }
             
             // Initialize Google Sheets loader if not already done
             if (sheetsLoader == null) {
-                sheetsLoader = new GoogleSheetsConfigLoader(sheetsBaseUrl);
+                // Get API key and sheets ID from configuration
+                String apiKey = baseConfig.getString("googleSheetsApiKey");
+                String sheetsId = baseConfig.getString("googleSheetsId");
+                
+                if (apiKey == null || apiKey.isEmpty() || sheetsId == null || sheetsId.isEmpty()) {
+                    throw new IllegalArgumentException("Missing API key or sheets ID for Google Sheets API");
+                }
+                
+                Log.i(TAG, "Using Google Sheets API v4 method");
+                sheetsLoader = new GoogleSheetsConfigLoader(sheetsId, apiKey);
             }
             
             Log.i(TAG, "Loading configuration for device: " + deviceId + " from Google Sheets");
@@ -163,7 +182,13 @@ public class ConfigurationManager {
             JSONObject fallbackConfig = baseConfig.getJSONObject("fallbackConfig");
             DeviceConfig config = parseDeviceConfigFromJson(fallbackConfig);
             config.setDeviceId(getDeviceId());
-            config.setDeviceName(getDeviceName());
+            
+            // Use configured device ID or fallback to device name
+            String deviceName = deviceIdManager.getDeviceId();
+            if (deviceName == null || deviceName.isEmpty()) {
+                deviceName = getDeviceName();
+            }
+            config.setDeviceName(deviceName);
             
             if (listener != null) {
                 listener.onConfigUpdated(config);
@@ -373,6 +398,47 @@ public class ConfigurationManager {
     
     public long getLastUpdateTime() {
         return prefs.getLong(KEY_LAST_UPDATE, 0);
+    }
+    
+    public String getGoogleSheetsApiKey() {
+        try {
+            JSONObject config = loadLocalConfigFromAssets();
+            if (config != null && config.has("googleSheetsApiKey")) {
+                return config.getString("googleSheetsApiKey");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error getting Google Sheets API key", e);
+        }
+        return null;
+    }
+    
+    public String getGoogleSheetsId() {
+        try {
+            JSONObject config = loadLocalConfigFromAssets();
+            if (config != null && config.has("googleSheetsId")) {
+                return config.getString("googleSheetsId");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error getting Google Sheets ID", e);
+        }
+        return null;
+    }
+    
+    private JSONObject loadLocalConfigFromAssets() {
+        try {
+            InputStream inputStream = context.getAssets().open("config.json");
+            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+            StringBuilder jsonString = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                jsonString.append(line);
+            }
+            reader.close();
+            return new JSONObject(jsonString.toString());
+        } catch (Exception e) {
+            Log.e(TAG, "Error reading config.json from assets", e);
+            return null;
+        }
     }
     
     public void shutdown() {

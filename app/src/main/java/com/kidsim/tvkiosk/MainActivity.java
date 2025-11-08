@@ -1,6 +1,7 @@
 package com.kidsim.tvkiosk;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
@@ -19,11 +20,22 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.ArrayAdapter;
+import android.widget.Spinner;
 import com.kidsim.tvkiosk.config.ConfigurationManager;
 import com.kidsim.tvkiosk.config.DeviceConfig;
+import com.kidsim.tvkiosk.config.DeviceIdManager;
+import com.kidsim.tvkiosk.config.GoogleSheetsConfigLoader;
 import com.kidsim.tvkiosk.config.PageConfig;
 import com.kidsim.tvkiosk.service.WatchdogService;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 public class MainActivity extends Activity implements ConfigurationManager.ConfigUpdateListener {
     
@@ -42,6 +54,7 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     
     // Configuration and timing
     private ConfigurationManager configManager;
+    private DeviceIdManager deviceIdManager;
     private DeviceConfig currentConfig;
     private List<PageConfig> pages;
     private int currentPageIndex = 0;
@@ -51,6 +64,9 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     private Handler configHandler;
     private Handler retryHandler;
     private Handler refreshHandler;
+    
+    // Background tasks
+    private ExecutorService executor;
     
     // Runnables
     private Runnable pageRotationRunnable;
@@ -89,6 +105,9 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         retryHandler = new Handler(Looper.getMainLooper());
         refreshHandler = new Handler(Looper.getMainLooper());
         
+        // Initialize background executor
+        executor = Executors.newSingleThreadExecutor();
+        
         // Initialize WebView pool arrays
         pageLoadStates = new boolean[3];
         backupPageLoadStates = new boolean[3];
@@ -105,8 +124,12 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         configManager = new ConfigurationManager(this);
         configManager.setConfigUpdateListener(this);
         
-        // Load initial configuration
-        loadConfiguration();
+        // Initialize device ID manager
+        deviceIdManager = new DeviceIdManager(this);
+        
+        // Check if device ID is configured, show setup if needed
+        // Configuration loading will happen after setup is complete
+        checkDeviceIdConfiguration();
         
         // Setup periodic configuration updates
         setupConfigurationUpdates();
@@ -821,6 +844,11 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
             configManager.shutdown();
         }
         
+        // Shutdown executor
+        if (executor != null) {
+            executor.shutdown();
+        }
+        
         // Clean up all WebViews in the pool
         for (int i = 0; i < 3; i++) {
             if (webViews[i] != null) {
@@ -850,5 +878,228 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         // Disable back button for kiosk mode
         // Uncomment the line below if you want to allow back navigation
         // super.onBackPressed();
+    }
+    
+    /**
+     * Check if device ID is configured, redirect to update screen if needed
+     */
+    private void checkDeviceIdConfiguration() {
+        if (!deviceIdManager.isDeviceIdConfigured()) {
+            Log.i(TAG, "Device ID not configured, redirecting to update screen");
+            // Redirect to UpdateActivity for first-time setup
+            Intent updateIntent = new Intent(this, UpdateActivity.class);
+            updateIntent.putExtra("firstTimeSetup", true);
+            startActivity(updateIntent);
+            finish(); // Close MainActivity
+        } else {
+            Log.i(TAG, "Device ID already configured: " + deviceIdManager.getDeviceId());
+            // Configuration is complete, load the app
+            loadConfiguration();
+        }
+    }
+    
+    /**
+     * Show device ID setup dialog for first-time configuration
+     */
+    private void showDeviceIdSetupDialog() {
+        // Create a custom layout with two spinners
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(50, 50, 50, 50);
+        
+        // Orientation selection
+        TextView orientationLabel = new TextView(this);
+        orientationLabel.setText("Select Orientation:");
+        orientationLabel.setTextSize(16);
+        layout.addView(orientationLabel);
+        
+        Spinner orientationSpinner = new Spinner(this);
+        List<String> orientations = new ArrayList<>();
+        orientations.add("Landscape");
+        orientations.add("Portrait");
+        ArrayAdapter<String> orientationAdapter = new ArrayAdapter<>(this, 
+            android.R.layout.simple_spinner_item, orientations);
+        orientationAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        orientationSpinner.setAdapter(orientationAdapter);
+        layout.addView(orientationSpinner);
+        
+        // Add some spacing
+        TextView spacer = new TextView(this);
+        spacer.setText("");
+        spacer.setPadding(0, 30, 0, 10);
+        layout.addView(spacer);
+        
+        // Device ID selection
+        TextView deviceIdLabel = new TextView(this);
+        deviceIdLabel.setText("Select Device ID:");
+        deviceIdLabel.setTextSize(16);
+        layout.addView(deviceIdLabel);
+        
+        Spinner deviceIdSpinner = new Spinner(this);
+        // Load device IDs from Google Sheets
+        loadDeviceIdsForSetup(deviceIdSpinner);
+        layout.addView(deviceIdSpinner);
+        
+        AlertDialog dialog = new AlertDialog.Builder(this)
+            .setTitle("First Time Setup")
+            .setMessage("Please configure this device:")
+            .setView(layout)
+            .setCancelable(false)
+            .setPositiveButton("Apply Configuration", null) // Set to null initially
+            .setNegativeButton("Cancel", (d, which) -> {
+                // Close app if user cancels setup
+                finish();
+            })
+            .create();
+            
+        dialog.setOnShowListener(d -> {
+            Button applyButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            applyButton.setEnabled(false); // Initially disabled
+            
+            // Enable button only when both spinners have selections
+            Runnable checkSelections = () -> {
+                boolean orientationSelected = orientationSpinner.getSelectedItem() != null;
+                boolean deviceIdSelected = deviceIdSpinner.getSelectedItem() != null && 
+                    !deviceIdSpinner.getSelectedItem().toString().startsWith("Loading");
+                applyButton.setEnabled(orientationSelected && deviceIdSelected);
+            };
+            
+            // Set up listeners to check selections
+            orientationSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+                @Override
+                public void onItemSelected(android.widget.AdapterView<?> parent, android.view.View view, int position, long id) {
+                    checkSelections.run();
+                }
+                @Override
+                public void onNothingSelected(android.widget.AdapterView<?> parent) {
+                    checkSelections.run();
+                }
+            });
+            
+            deviceIdSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+                @Override
+                public void onItemSelected(android.widget.AdapterView<?> parent, android.view.View view, int position, long id) {
+                    checkSelections.run();
+                }
+                @Override
+                public void onNothingSelected(android.widget.AdapterView<?> parent) {
+                    checkSelections.run();
+                }
+            });
+            
+            applyButton.setOnClickListener(v -> {
+                String selectedOrientation = (String) orientationSpinner.getSelectedItem();
+                String selectedDeviceId = (String) deviceIdSpinner.getSelectedItem();
+                
+                if (selectedOrientation != null && selectedDeviceId != null && 
+                    !selectedDeviceId.startsWith("Loading")) {
+                    
+                    // Store both orientation and device ID
+                    deviceIdManager.setDeviceId(selectedDeviceId);
+                    // Store orientation in SharedPreferences for later use
+                    getSharedPreferences("device_config", MODE_PRIVATE)
+                        .edit()
+                        .putString("orientation", selectedOrientation.toLowerCase())
+                        .apply();
+                    
+                    Toast.makeText(this, "Configuration applied: " + selectedOrientation + " / " + selectedDeviceId, 
+                        Toast.LENGTH_SHORT).show();
+                    Log.i(TAG, "Device configuration applied: " + selectedOrientation + " / " + selectedDeviceId);
+                    
+                    dialog.dismiss();
+                    
+                    // Now load configuration with new settings
+                    loadConfiguration();
+                } else {
+                    Toast.makeText(this, "Please select both orientation and device ID", 
+                        Toast.LENGTH_SHORT).show();
+                }
+            });
+        });
+        
+        dialog.show();
+    }
+    
+    /**
+     * Load available device IDs from Google Sheets for setup dialog
+     */
+    private void loadDeviceIdsForSetup(Spinner spinner) {
+        // Set loading message while fetching device IDs
+        List<String> loadingList = new ArrayList<>();
+        loadingList.add("Loading device IDs...");
+        ArrayAdapter<String> loadingAdapter = new ArrayAdapter<>(this, 
+            android.R.layout.simple_spinner_item, loadingList);
+        loadingAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinner.setAdapter(loadingAdapter);
+        
+        // Fetch device IDs in background
+        executor.execute(() -> {
+            try {
+                List<String> deviceIds = fetchDeviceIdsFromGoogleSheets();
+                
+                runOnUiThread(() -> {
+                    ArrayAdapter<String> adapter = new ArrayAdapter<>(this, 
+                        android.R.layout.simple_spinner_item, deviceIds);
+                    adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                    spinner.setAdapter(adapter);
+                });
+                
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to load device IDs for setup", e);
+                runOnUiThread(() -> {
+                    // Use fallback device IDs
+                    List<String> fallbackIds = new ArrayList<>();
+                    fallbackIds.add("Test");
+                    fallbackIds.add("Production");
+                    fallbackIds.add("Lobby");
+                    
+                    ArrayAdapter<String> adapter = new ArrayAdapter<>(this, 
+                        android.R.layout.simple_spinner_item, fallbackIds);
+                    adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                    spinner.setAdapter(adapter);
+                    
+                    Toast.makeText(this, "Using fallback device IDs", Toast.LENGTH_SHORT).show();
+                });
+            }
+        });
+    }
+    
+    /**
+     * Fetch device IDs from Google Sheets
+     */
+    private List<String> fetchDeviceIdsFromGoogleSheets() throws Exception {
+        List<String> deviceIds = new ArrayList<>();
+        String csvUrl = "https://docs.google.com/spreadsheets/d/1vWzoYpMDIwfpAuwChbwinmoZxqwelO64ODOS97b27ag/export?format=csv&gid=0";
+        
+        URL url = new URL(csvUrl);
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("GET");
+        connection.setConnectTimeout(10000);
+        connection.setReadTimeout(10000);
+        
+        BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+        String line;
+        boolean firstRow = true;
+        
+        while ((line = reader.readLine()) != null) {
+            if (firstRow) {
+                firstRow = false;
+                continue; // Skip header row
+            }
+            
+            String[] parts = line.split(",");
+            if (parts.length >= 2 && !parts[1].trim().isEmpty()) {
+                String deviceId = parts[1].trim().replace("\"", "");
+                if (!deviceId.equalsIgnoreCase("DeviceID")) {
+                    deviceIds.add(deviceId);
+                }
+            }
+        }
+        
+        reader.close();
+        connection.disconnect();
+        
+        Log.i(TAG, "Loaded " + deviceIds.size() + " device IDs from Google Sheets for setup");
+        return deviceIds;
     }
 }
