@@ -52,9 +52,9 @@ public class UpdateActivity extends Activity {
     
     // Fallback URLs in case API fails
     private static final String FALLBACK_RELEASE_APK_URL = 
-        "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/download/v1.3/app-release.apk";
+        "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/download/v1.0-test/app-test.apk";
     private static final String FALLBACK_DEBUG_APK_URL = 
-        "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/download/v2.0-debug/app-debug.apk";
+        "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/download/v1.0-test/app-test.apk";
     
     private SharedPreferences preferences;
     private DeviceIdManager deviceIdManager;
@@ -405,27 +405,40 @@ public class UpdateActivity extends Activity {
             
             // Look for APK asset in the assets array
             JSONArray assets = releaseData.getJSONArray("assets");
+            String fallbackApkUrl = null;
+            
             for (int i = 0; i < assets.length(); i++) {
                 JSONObject asset = assets.getJSONObject(i);
                 String assetName = asset.getString("name");
                 
                 // For Release builds, prefer app-release.apk, otherwise any APK
                 if (assetName.toLowerCase().endsWith(".apk")) {
+                    String downloadUrl = asset.getString("browser_download_url");
+                    
                     if (buildType.equals("Release")) {
                         // Prefer release APKs for release builds
                         if (assetName.toLowerCase().contains("release") || 
-                            (!assetName.toLowerCase().contains("debug") && !assetName.toLowerCase().contains("test"))) {
-                            String downloadUrl = asset.getString("browser_download_url");
+                            (!assetName.toLowerCase().contains("debug"))) {
                             Log.i(TAG, "Found " + buildType + " APK asset: " + assetName + " -> " + downloadUrl);
                             return downloadUrl;
                         }
+                        // Keep any APK as fallback for Release builds
+                        if (fallbackApkUrl == null) {
+                            fallbackApkUrl = downloadUrl;
+                            Log.d(TAG, "Keeping fallback APK for " + buildType + ": " + assetName);
+                        }
                     } else {
                         // For non-release builds, take first APK found
-                        String downloadUrl = asset.getString("browser_download_url");
                         Log.i(TAG, "Found " + buildType + " APK asset: " + assetName + " -> " + downloadUrl);
                         return downloadUrl;
                     }
                 }
+            }
+            
+            // If Release build and no preferred APK found, use fallback
+            if (buildType.equals("Release") && fallbackApkUrl != null) {
+                Log.i(TAG, "Using fallback APK for " + buildType + ": " + fallbackApkUrl);
+                return fallbackApkUrl;
             }
             
             Log.w(TAG, "No suitable APK assets found in " + buildType + " release");
