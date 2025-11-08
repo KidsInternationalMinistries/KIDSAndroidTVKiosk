@@ -14,112 +14,123 @@ if ($currentBranch -ne "test") {
     exit 1
 }
 
-# Auto-commit any uncommitted changes
-$status = git status --porcelain
-if ($status) {
-    Write-Host "Auto-committing uncommitted changes..." -ForegroundColor Yellow
-    
-    # Force clean ALL build files and IDE files - these should never be committed
-    Write-Host "Cleaning build files..." -ForegroundColor Yellow
-    git checkout HEAD -- .gradle/ 2>$null
-    git checkout HEAD -- app/build/ 2>$null
-    git checkout HEAD -- build/ 2>$null
-    git checkout HEAD -- .idea/ 2>$null
-    git clean -fd .gradle/ app/build/ build/ .idea/ 2>$null
-    git reset HEAD . 2>$null
-    
-    # Add only source files - exclude build directories completely
-    git add .gitignore *.md *.json *.gradle *.properties *.bat *.ps1 gradlew* "app/src/" "gradle/"
-    
-    # Only commit if there are actually changes to source files
-    $statusAfterClean = git diff --cached --name-only
-    if ($statusAfterClean) {
-        $autoMessage = "Auto-commit before release - $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
-        git commit -m "$autoMessage"
-        
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "Error: Failed to auto-commit changes" -ForegroundColor Red
-            exit 1
-        }
-        
-        Write-Host "Changes auto-committed" -ForegroundColor Green
+# Extract version from build.gradle if not provided
+if ([string]::IsNullOrWhiteSpace($Version)) {
+    $buildGradle = Get-Content "app/build.gradle" -Raw
+    if ($buildGradle -match 'versionName\s+"([^"]+)"') {
+        $Version = "v" + $Matches[1]
     } else {
-        Write-Host "No source changes to commit" -ForegroundColor Green
-    }
-}
-
-# Get version number
-if ([string]::IsNullOrEmpty($Version)) {
-    $Version = Read-Host "Enter version number (e.g. v1.0.0)"
-    if ([string]::IsNullOrEmpty($Version)) {
-        Write-Host "Error: Version number is required" -ForegroundColor Red
+        Write-Host "Error: Could not extract version from app/build.gradle" -ForegroundColor Red
         exit 1
     }
 }
 
-# Ensure version starts with 'v'
-if (-not $Version.StartsWith("v")) {
-    $Version = "v$Version"
+# Use version as default message if no message provided
+if ([string]::IsNullOrWhiteSpace($Message)) {
+    $Message = "Release $Version"
 }
 
-# Get release message
-if ([string]::IsNullOrEmpty($Message)) {
-    $Message = Read-Host "Enter release message (or press Enter for default)"
-    if ([string]::IsNullOrEmpty($Message)) {
-        $Message = "Release $Version"
-    }
+Write-Host "Building and publishing release version: $Version" -ForegroundColor Cyan
+Write-Host "Message: $Message" -ForegroundColor White
+Write-Host ""
+
+# Step 1: Build release APK
+Write-Host "Step 1: Building release APK..." -ForegroundColor Yellow
+$buildResult = .\gradlew assembleRelease 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Error: Failed to build release APK" -ForegroundColor Red
+    Write-Host $buildResult
+    exit 1
+}
+Write-Host "Release APK built successfully" -ForegroundColor Green
+
+# Step 2: Commit any pending changes to test branch
+Write-Host "Step 2: Committing changes to test branch..." -ForegroundColor Yellow
+git add .
+git commit -m $Message 2>&1 | Out-Null
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "Changes committed to test branch" -ForegroundColor Green
+} else {
+    Write-Host "Note: No changes to commit" -ForegroundColor Yellow
 }
 
-Write-Host ""
-Write-Host "Creating release:" -ForegroundColor Cyan
-Write-Host "  Version: $Version" -ForegroundColor White
-Write-Host "  Message: $Message" -ForegroundColor White
-Write-Host ""
-
-$confirm = Read-Host "Continue? (y/N)"
-if ($confirm -ne "y" -and $confirm -ne "Y") {
-    Write-Host "Cancelled" -ForegroundColor Yellow
-    exit 0
-}
-
-Write-Host ""
-Write-Host "Step 1: Fetching latest..." -ForegroundColor Yellow
-git fetch origin
-
-Write-Host "Step 2: Switching to main..." -ForegroundColor Yellow
-# Stash any remaining uncommitted changes (build files etc)
-git stash push -m "Temporary stash for release" 2>$null
+# Step 3: Merge test into main
+Write-Host "Step 3: Merging test branch into main..." -ForegroundColor Yellow
 git checkout main
-if ($LASTEXITCODE -ne 0) { 
-    Write-Host "Error switching to main" -ForegroundColor Red
-    git stash pop 2>$null  # Restore stash if checkout failed
-    exit 1 
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Error: Failed to checkout main branch" -ForegroundColor Red
+    exit 1
 }
 
-Write-Host "Step 3: Updating main..." -ForegroundColor Yellow
-git pull origin main
-if ($LASTEXITCODE -ne 0) { Write-Host "Error updating main" -ForegroundColor Red; exit 1 }
+git merge test --no-ff -m "Merge test branch for release $Version"
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Error: Failed to merge test into main" -ForegroundColor Red
+    git checkout test
+    exit 1
+}
+Write-Host "Test branch merged into main" -ForegroundColor Green
 
-Write-Host "Step 4: Merging test..." -ForegroundColor Yellow
-git merge test -m "Merge test for release $Version"
-if ($LASTEXITCODE -ne 0) { Write-Host "Error merging test" -ForegroundColor Red; exit 1 }
+# Step 4: Create and push tag
+Write-Host "Step 4: Creating tag $Version..." -ForegroundColor Yellow
+git tag -a $Version -m $Message
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Error: Failed to create tag" -ForegroundColor Red
+    git checkout test
+    exit 1
+}
+Write-Host "Tag $Version created" -ForegroundColor Green
 
-Write-Host "Step 5: Creating tag..." -ForegroundColor Yellow
-git tag -a $Version -m "$Message"
-if ($LASTEXITCODE -ne 0) { Write-Host "Error creating tag" -ForegroundColor Red; exit 1 }
-
-Write-Host "Step 6: Pushing..." -ForegroundColor Yellow
+# Step 5: Push main and tags
+Write-Host "Step 5: Pushing to GitHub..." -ForegroundColor Yellow
 git push origin main
-git push origin $Version
-if ($LASTEXITCODE -ne 0) { Write-Host "Error pushing" -ForegroundColor Red; exit 1 }
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Error: Failed to push main branch" -ForegroundColor Red
+    git checkout test
+    exit 1
+}
 
-Write-Host "Step 7: Back to test..." -ForegroundColor Yellow
+git push origin $Version
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Error: Failed to push tag" -ForegroundColor Red
+    git checkout test
+    exit 1
+}
+
+# Step 6: Create GitHub release with APK
+Write-Host "Step 6: Creating GitHub release..." -ForegroundColor Yellow
+$apkPath = "app/build/outputs/apk/release/app-release.apk"
+if (-not (Test-Path $apkPath)) {
+    Write-Host "Error: Release APK not found at $apkPath" -ForegroundColor Red
+    git checkout test
+    exit 1
+}
+
+gh release create $Version $apkPath --title "Release $Version" --notes $Message
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Error: Failed to create GitHub release" -ForegroundColor Red
+    git checkout test
+    exit 1
+}
+
+# Step 7: Return to test branch
+Write-Host "Step 7: Returning to test branch..." -ForegroundColor Yellow
 git checkout test
-# Restore any stashed build files
-git stash pop 2>$null
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Warning: Failed to return to test branch" -ForegroundColor Yellow
+}
 
 Write-Host ""
-Write-Host "=== Release Complete ===" -ForegroundColor Green
-Write-Host "Version: $Version" -ForegroundColor Green
-Write-Host "GitHub: https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/tag/$Version" -ForegroundColor Cyan
+Write-Host "=== Release Published Successfully ===" -ForegroundColor Green
+Write-Host "Release APK built" -ForegroundColor Green
+Write-Host "Code merged to main branch" -ForegroundColor Green
+Write-Host "Tag $Version created" -ForegroundColor Green
+Write-Host "Pushed to GitHub" -ForegroundColor Green
+Write-Host "GitHub release $Version created" -ForegroundColor Green
+Write-Host ""
+Write-Host "Release available at: https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/tag/$Version" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "Next steps:" -ForegroundColor Cyan
+Write-Host "- Verify the release works correctly" -ForegroundColor White
+Write-Host "- Update version in build.gradle for next release" -ForegroundColor White
+Write-Host "- Continue development on test branch" -ForegroundColor White
 Write-Host ""
