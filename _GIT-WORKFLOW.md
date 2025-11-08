@@ -5,8 +5,8 @@ This project uses a simple Git workflow for development and deployment. Since yo
 ## Workflow Overview
 
 1. **Development** - Work on the `test` branch
-2. **Testing** - Use `_git_publish.ps1 debug` to commit and test changes
-3. **Release** - Use `_git_publish.ps1 release` to create versioned releases
+2. **Testing** - Use `_publish.ps1 debug` to commit and test changes
+3. **Release** - Use `_publish.ps1 release` to create versioned releases
 
 ## Branch Structure
 
@@ -15,7 +15,7 @@ This project uses a simple Git workflow for development and deployment. Since yo
 
 ## Unified Publishing Script
 
-### `_git_publish.ps1` - For Both Debug and Release
+### `_publish.ps1` - For Both Debug and Release
 
 This unified script handles both debug and release publishing. You can specify the build type or let it prompt you interactively.
 
@@ -32,10 +32,10 @@ This unified script handles both debug and release publishing. You can specify t
 **Usage:**
 ```powershell
 # Direct debug with custom message
-.\_git_publish.ps1 debug -Message "Fixed UI bug in settings screen"
+.\_publish.ps1 debug -Message "Fixed UI bug in settings screen"
 
 # Interactive mode (will ask for debug/release choice)
-.\_git_publish.ps1
+.\_publish.ps1
 ```
 
 #### Release Mode
