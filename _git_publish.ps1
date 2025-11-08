@@ -41,13 +41,32 @@ $BuildType = Get-BuildType
 Write-Host "=== KIDS Android TV Kiosk - Git Publish ($($BuildType.ToUpper())) ===" -ForegroundColor Green
 Write-Host ""
 
-# Check if we're on test branch
+# Check branch requirements based on build type
 $currentBranch = git branch --show-current
-if ($currentBranch -ne "test") {
-    Write-Host "Error: You must be on the 'test' branch to publish" -ForegroundColor Red
-    Write-Host "Current branch: $currentBranch" -ForegroundColor Yellow
-    Write-Host "Run: git checkout test" -ForegroundColor Yellow
-    exit 1
+
+if ($BuildType -eq "debug") {
+    # Debug builds can be published from any branch
+    Write-Host "Publishing debug from branch: $currentBranch" -ForegroundColor Cyan
+} else {
+    # Release builds should be from version branches
+    if ($currentBranch -eq "main") {
+        Write-Host "Error: Cannot publish release from 'main' branch" -ForegroundColor Red
+        Write-Host "Please create a version branch first or switch to an existing version branch" -ForegroundColor Yellow
+        Write-Host "Example: git checkout -b version/v1.4" -ForegroundColor Yellow
+        exit 1
+    }
+    
+    if ($currentBranch -eq "test") {
+        Write-Host "Warning: Publishing release from 'test' branch" -ForegroundColor Yellow
+        Write-Host "Consider creating a version branch: git checkout -b version/v1.4" -ForegroundColor Yellow
+        $confirm = Read-Host "Continue anyway? (y/N)"
+        if ($confirm -ne "y" -and $confirm -ne "Y") {
+            Write-Host "Release cancelled" -ForegroundColor Yellow
+            exit 0
+        }
+    }
+    
+    Write-Host "Publishing release from branch: $currentBranch" -ForegroundColor Cyan
 }
 
 # Check if GitHub CLI is available
@@ -139,7 +158,7 @@ if ($statusCheck) {
         Write-Host "Error: Failed to commit changes" -ForegroundColor Red
         exit 1
     }
-    Write-Host "Changes committed to test branch" -ForegroundColor Green
+    Write-Host "Changes committed to $currentBranch branch" -ForegroundColor Green
 } else {
     Write-Host "No changes to commit" -ForegroundColor Yellow
 }
@@ -175,7 +194,7 @@ if ($needsTag) {
 
 # Step: Push to GitHub
 Write-Host "Step $stepNum`: Pushing to GitHub..." -ForegroundColor Yellow
-git push origin test
+git push origin $currentBranch
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Error: Failed to push to GitHub" -ForegroundColor Red
     exit 1
@@ -211,7 +230,7 @@ if ($isPrerelease) {
     $releaseArgs += "--prerelease"
 }
 if ($BuildType -eq "debug") {
-    $releaseArgs += "--target", "test"
+    $releaseArgs += "--target", $currentBranch
 }
 
 gh release create @releaseArgs
@@ -223,7 +242,7 @@ if ($LASTEXITCODE -ne 0) {
 # Success summary
 Write-Host ""
 Write-Host "=== $($BuildType.ToUpper()) Publish Complete ===" -ForegroundColor Green
-Write-Host "Changes committed to test branch" -ForegroundColor Green
+Write-Host "Changes committed to $currentBranch branch" -ForegroundColor Green
 Write-Host "$BuildType APK built successfully" -ForegroundColor Green
 Write-Host "Pushed to GitHub" -ForegroundColor Green
 if ($needsTag) {
@@ -240,6 +259,6 @@ if ($BuildType -eq "debug") {
 } else {
     Write-Host "- Verify the release works correctly" -ForegroundColor White
     Write-Host "- Update version in build.gradle for next release using: ._bump_version.ps1" -ForegroundColor White
-    Write-Host "- Continue development on test branch" -ForegroundColor White
+    Write-Host "- Continue development on current branch" -ForegroundColor White
 }
 Write-Host ""
