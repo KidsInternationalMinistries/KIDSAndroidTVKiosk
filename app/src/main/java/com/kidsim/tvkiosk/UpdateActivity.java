@@ -138,7 +138,7 @@ public class UpdateActivity extends Activity {
         List<String> buildTypes = new ArrayList<>();
         
         // Debug app can only update to debug versions
-        // Production app can choose between Release and Debug
+        // Production app can install both: Release (update itself) or Debug (install debug app)
         if (isDebugApp()) {
             buildTypes.add("Debug");
         } else {

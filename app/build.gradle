@@ -21,8 +21,10 @@ android {
         }
         
         release {
+            debuggable true  // Keep debuggable for internal distribution
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.debug  // Use debug signing for internal distribution
         }
     }
 
