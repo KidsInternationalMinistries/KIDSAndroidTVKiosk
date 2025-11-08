@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$Version = "",
     [string]$Message = ""
 )
@@ -62,10 +62,9 @@ if ($statusCheck) {
 
 # Step 3: Build release APK
 Write-Host "Step 3: Building release APK..." -ForegroundColor Yellow
-$buildResult = .\gradlew assembleRelease 2>&1
+.\gradlew assembleRelease
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Error: Failed to build release APK" -ForegroundColor Red
-    Write-Host $buildResult
     exit 1
 }
 Write-Host "Release APK built successfully" -ForegroundColor Green
@@ -79,7 +78,7 @@ if (-not (Test-Path $apkPath)) {
 
 # Step 5: Create and push tag from current test branch
 Write-Host "Step 5: Creating tag $Version from test branch..." -ForegroundColor Yellow
-git tag -a $Version -m $Message
+git tag -a $Version -m "$Message"
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Error: Failed to create tag" -ForegroundColor Red
     exit 1
@@ -102,7 +101,7 @@ if ($LASTEXITCODE -ne 0) {
 
 # Step 7: Create GitHub release with APK
 Write-Host "Step 7: Creating GitHub release..." -ForegroundColor Yellow
-gh release create $Version $apkPath --title "Release $Version" --notes $Message
+gh release create $Version $apkPath --title "Release $Version" --notes "$Message"
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Error: Failed to create GitHub release" -ForegroundColor Red
     exit 1
@@ -110,19 +109,7 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host ""
 Write-Host "=== Release Published Successfully ===" -ForegroundColor Green
-Write-Host "✓ Changes committed to test branch" -ForegroundColor Green
-Write-Host "✓ Release APK built" -ForegroundColor Green
-Write-Host "✓ Tag $Version created" -ForegroundColor Green
-Write-Host "✓ Pushed to GitHub" -ForegroundColor Green
-Write-Host "✓ GitHub release $Version created" -ForegroundColor Green
-Write-Host ""
-Write-Host "Release available at: https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/tag/$Version" -ForegroundColor Cyan
-Write-Host ""
-Write-Host "Next steps:" -ForegroundColor Cyan
-Write-Host "- Verify the release works correctly" -ForegroundColor White
-Write-Host "- Update version in build.gradle for next release using: .\_bump_version.ps1" -ForegroundColor White
-Write-Host "- Continue development on test branch" -ForegroundColor White
-Write-Host ""
+Write-Host "Changes committed to test branch" -ForegroundColor Green
 Write-Host "Release APK built" -ForegroundColor Green
 Write-Host "Tag $Version created" -ForegroundColor Green
 Write-Host "Pushed to GitHub" -ForegroundColor Green
@@ -132,6 +119,6 @@ Write-Host "Release available at: https://github.com/KidsInternationalMinistries
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Cyan
 Write-Host "- Verify the release works correctly" -ForegroundColor White
-Write-Host "- Update version in build.gradle for next release" -ForegroundColor White
+Write-Host "- Update version in build.gradle for next release using: ._bump_version.ps1" -ForegroundColor White
 Write-Host "- Continue development on test branch" -ForegroundColor White
 Write-Host ""
