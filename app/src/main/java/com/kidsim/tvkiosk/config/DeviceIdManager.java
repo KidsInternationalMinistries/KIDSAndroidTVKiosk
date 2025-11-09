@@ -67,35 +67,4 @@ public class DeviceIdManager {
     public boolean isDebugMode() {
         return prefs.getBoolean(KEY_IS_DEBUG_MODE, false);
     }
-    
-    /**
-     * Set debug mode
-     */
-    public void setDebugMode(boolean isDebug) {
-        prefs.edit()
-            .putBoolean(KEY_IS_DEBUG_MODE, isDebug)
-            .apply();
-        Log.i(TAG, "Debug mode set to: " + isDebug);
-    }
-    
-    /**
-     * Clear all stored configuration (for reset purposes)
-     */
-    public void clearConfiguration() {
-        prefs.edit().clear().apply();
-        Log.i(TAG, "Device configuration cleared");
-    }
-    
-    /**
-     * Get configuration summary for display
-     */
-    public String getConfigurationSummary() {
-        String deviceId = getDeviceId();
-        String orientation = getOrientation();
-        boolean isDebug = isDebugMode();
-        return String.format("Device: %s\nOrientation: %s\nMode: %s", 
-            deviceId != null ? deviceId : "Not configured",
-            orientation != null ? orientation : "Not configured",
-            isDebug ? "Debug" : "Release");
-    }
 }

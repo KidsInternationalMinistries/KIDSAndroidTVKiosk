@@ -96,16 +96,40 @@
         android:gravity="center"
         android:layout_marginBottom="20dp" />
 
-    <!-- Save and Install Button -->
-    <Button
-        android:id="@+id/saveAndInstallButton"
+    <!-- Button Container -->
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="60dp"
-        android:text="Download and Install Update"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:textColor="#ffffff"
-        android:background="@drawable/install_button_background"
-        android:layout_marginTop="20dp" />
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="20dp"
+        android:weightSum="2">
+
+        <!-- Save Changes Button -->
+        <Button
+            android:id="@+id/saveChangesButton"
+            android:layout_width="0dp"
+            android:layout_height="60dp"
+            android:layout_weight="1"
+            android:text="Save Changes"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#ffffff"
+            android:background="@drawable/install_button_background"
+            android:layout_marginEnd="10dp" />
+
+        <!-- Update Button -->
+        <Button
+            android:id="@+id/updateButton"
+            android:layout_width="0dp"
+            android:layout_height="60dp"
+            android:layout_weight="1"
+            android:text="Update APK"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#ffffff"
+            android:background="@drawable/install_button_background"
+            android:layout_marginStart="10dp" />
+
+    </LinearLayout>
 
 </LinearLayout>

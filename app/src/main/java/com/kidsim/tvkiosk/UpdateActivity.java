@@ -3,13 +3,11 @@ package com.kidsim.tvkiosk;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.DownloadManager;
-import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
-import android.content.pm.PackageInstaller;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
@@ -25,7 +23,10 @@ import android.widget.TextView;
 import android.widget.Toast;
 import com.kidsim.tvkiosk.config.DeviceIdManager;
 import com.kidsim.tvkiosk.config.GoogleSheetsConfigLoader;
+import com.kidsim.tvkiosk.utils.ErrorHandler;
+import com.kidsim.tvkiosk.constants.AppConstants;
 import com.kidsim.tvkiosk.config.ConfigurationManager;
+import com.kidsim.tvkiosk.config.DeviceConfig;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -45,16 +46,12 @@ public class UpdateActivity extends Activity {
     private static final String TAG = "UpdateActivity";
     
     // GitHub API URLs to get release information
-    private static final String GITHUB_RELEASES_API_URL = 
-        "https://api.github.com/repos/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases";
-    private static final String GITHUB_LATEST_RELEASE_API_URL = 
-        "https://api.github.com/repos/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/latest";
+    private static final String GITHUB_RELEASES_API_URL = AppConstants.GitHub.RELEASES_API_URL;
+    private static final String GITHUB_LATEST_RELEASE_API_URL = AppConstants.GitHub.LATEST_RELEASE_API_URL;
     
     // Fallback URLs in case API fails
-    private static final String FALLBACK_RELEASE_APK_URL = 
-        "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/download/v1.0-test/app-test.apk";
-    private static final String FALLBACK_DEBUG_APK_URL = 
-        "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/download/v1.0-test/app-test.apk";
+    private static final String FALLBACK_RELEASE_APK_URL = AppConstants.GitHub.FALLBACK_DEBUG_APK_URL;
+    private static final String FALLBACK_DEBUG_APK_URL = AppConstants.GitHub.FALLBACK_DEBUG_APK_URL;
     
     private SharedPreferences preferences;
     private DeviceIdManager deviceIdManager;
@@ -68,7 +65,8 @@ public class UpdateActivity extends Activity {
     private Spinner deviceIdSpinner;
     private TextView statusText;
     private TextView currentVersionText;
-    private Button saveAndInstallButton;
+    private Button saveChangesButton;
+    private Button updateButton;
     
     private List<String> availableDeviceIds;
     private boolean isFirstTimeSetup = false;
@@ -79,7 +77,7 @@ public class UpdateActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_update);
         
-        Log.i(TAG, "UpdateActivity started");
+        ErrorHandler.logActivityStart(TAG, "UpdateActivity");
         
         // Check if this is first-time setup
         isFirstTimeSetup = getIntent().getBooleanExtra("firstTimeSetup", false);
@@ -89,6 +87,25 @@ public class UpdateActivity extends Activity {
         deviceIdManager = new DeviceIdManager(this);
         configManager = new ConfigurationManager(this);
         executor = Executors.newSingleThreadExecutor();
+        
+        // Set up configuration listener
+        configManager.setConfigUpdateListener(new ConfigurationManager.ConfigUpdateListener() {
+            @Override
+            public void onConfigUpdated(DeviceConfig config) {
+                runOnUiThread(() -> {
+                    statusText.setText("Configuration loaded successfully for " + config.getDeviceName());
+                    ErrorHandler.logConfigInfo(TAG, "Device", config.getDeviceName());
+                });
+            }
+            
+            @Override
+            public void onConfigError(String error) {
+                runOnUiThread(() -> {
+                    statusText.setText("Configuration error: " + error);
+                    ErrorHandler.logConfigError(TAG, "Device", error);
+                });
+            }
+        });
         
         initializeViews();
         setupSpinners();
@@ -113,10 +130,12 @@ public class UpdateActivity extends Activity {
         deviceIdSpinner = findViewById(R.id.deviceIdSpinner);
         statusText = findViewById(R.id.statusText);
         currentVersionText = findViewById(R.id.currentVersionText);
-        saveAndInstallButton = findViewById(R.id.saveAndInstallButton);
+        saveChangesButton = findViewById(R.id.saveChangesButton);
+        updateButton = findViewById(R.id.updateButton);
         
-        // Start with button disabled until all selections are made
-        saveAndInstallButton.setEnabled(false);
+        // Start with buttons disabled until all selections are made
+        saveChangesButton.setEnabled(false);
+        updateButton.setEnabled(false);
         
         // Set button text based on app type
         updateButtonText();
@@ -127,9 +146,9 @@ public class UpdateActivity extends Activity {
     
     private void updateButtonText() {
         if (isDebugApp()) {
-            saveAndInstallButton.setText("Download Debug Update");
+            updateButton.setText("Download Debug Update");
         } else {
-            saveAndInstallButton.setText("Download Release Update");
+            updateButton.setText("Download Release Update");
         }
     }
     
@@ -139,7 +158,7 @@ public class UpdateActivity extends Activity {
             int versionCode = getPackageManager().getPackageInfo(getPackageName(), 0).versionCode;
             currentVersionText.setText("Current Version: " + versionName + " (build " + versionCode + ")");
         } catch (Exception e) {
-            Log.e(TAG, "Could not get version info", e);
+            ErrorHandler.logError(TAG, "Could not get version info", e);
             currentVersionText.setText("Current Version: Unknown");
         }
     }
@@ -163,16 +182,10 @@ public class UpdateActivity extends Activity {
         orientations.add("Portrait");
         
         // Set up adapters (build type is now read-only)
-        ArrayAdapter<String> buildAdapter = new ArrayAdapter<>(this, 
-            R.layout.spinner_item, buildTypes);
-        buildAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item);
-        buildTypeSpinner.setAdapter(buildAdapter);
+        setupSpinner(buildTypeSpinner, buildTypes, true);
         buildTypeSpinner.setEnabled(false); // Make it read-only
         
-        ArrayAdapter<String> orientationAdapter = new ArrayAdapter<>(this, 
-            R.layout.spinner_item, orientations);
-        orientationAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item);
-        orientationSpinner.setAdapter(orientationAdapter);
+        setupSpinner(orientationSpinner, orientations, true);
         
         // Load saved preferences
         loadSavedPreferences();
@@ -192,7 +205,8 @@ public class UpdateActivity extends Activity {
     }
     
     private void setupEventHandlers() {
-        saveAndInstallButton.setOnClickListener(v -> saveAndInstall());
+        saveChangesButton.setOnClickListener(v -> saveChanges());
+        updateButton.setOnClickListener(v -> downloadAndInstallUpdate());
     }
     
     private void loadDeviceIds() {
@@ -246,10 +260,7 @@ public class UpdateActivity extends Activity {
             availableDeviceIds.add(0, ""); // Add blank at beginning
         }
         
-        ArrayAdapter<String> deviceAdapter = new ArrayAdapter<>(this, 
-            R.layout.spinner_item, availableDeviceIds);
-        deviceAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item);
-        deviceIdSpinner.setAdapter(deviceAdapter);
+        setupSpinner(deviceIdSpinner, availableDeviceIds, true);
         
         // Load saved device ID (default: blank)
         String savedDeviceId = preferences.getString("deviceId", "");
@@ -292,10 +303,12 @@ public class UpdateActivity extends Activity {
             deviceIdSpinner.getSelectedItem() != null &&
             !deviceIdSpinner.getSelectedItem().toString().isEmpty();
         
-        saveAndInstallButton.setEnabled(hasValidSelections);
+        saveChangesButton.setEnabled(hasValidSelections);
+        updateButton.setEnabled(hasValidSelections);
         
-        // Make sure the button visual state updates properly
-        saveAndInstallButton.refreshDrawableState();
+        // Make sure the button visual states update properly
+        saveChangesButton.refreshDrawableState();
+        updateButton.refreshDrawableState();
         
         String appType = isDebugApp() ? "Debug" : "Release";
         Log.d(TAG, "Button enabled: " + hasValidSelections + 
@@ -304,8 +317,8 @@ public class UpdateActivity extends Activity {
                ", DeviceId: " + (deviceIdSpinner.getSelectedItem() != null ? deviceIdSpinner.getSelectedItem().toString() : "null") + ")");
     }
     
-    private void saveAndInstall() {
-        Log.i(TAG, "saveAndInstall() called - Save and Install button clicked");
+    private void saveChanges() {
+        Log.i(TAG, "saveChanges() called - Save Changes button clicked");
         
         // Get selected values
         String orientation = orientationSpinner.getSelectedItem().toString();
@@ -321,14 +334,40 @@ public class UpdateActivity extends Activity {
         editor.putString("buildType", buildType);
         editor.putString("orientation", orientation);
         editor.putString("deviceId", deviceId);
+        
+        Log.d(TAG, "Saving to SharedPreferences: orientation='" + orientation + "'");
+        
         editor.apply();
+        
+        Log.d(TAG, "SharedPreferences saved successfully");
+        
+        // Verify what was saved
+        String savedOrientation = preferences.getString("orientation", "NOT_FOUND");
+        Log.d(TAG, "Verification: orientation saved as '" + savedOrientation + "'");
         
         // Save device ID using DeviceIdManager if not blank
         if (!deviceId.isEmpty()) {
             deviceIdManager.setDeviceId(deviceId);
+            
+            // Load configuration from Google Sheets for this device
+            statusText.setText("Loading configuration for " + deviceId + "...");
+            configManager.loadConfigurationFromGoogleSheets(deviceId);
         }
         
         Log.i(TAG, "Saved settings - Build: " + buildType + ", Orientation: " + orientation + ", Device: " + deviceId);
+        statusText.setText("Settings saved successfully!");
+    }
+    
+    private void enableButtons() {
+        updateButton.setEnabled(true);
+        saveChangesButton.setEnabled(true);
+    }
+    
+    private void downloadAndInstallUpdate() {
+        Log.i(TAG, "downloadAndInstallUpdate() called - Update button clicked");
+        
+        // Get build type
+        String buildType = isDebugApp() ? "Debug" : "Release";
         
         // Start download and installation
         downloadAndInstallAPK(buildType);
@@ -337,7 +376,7 @@ public class UpdateActivity extends Activity {
     private void downloadAndInstallAPK(String buildType) {
         Log.i(TAG, "downloadAndInstallAPK() called for buildType: " + buildType);
         statusText.setText("Getting latest release information...");
-        saveAndInstallButton.setEnabled(false);
+        updateButton.setEnabled(false);
         
         // Proceed with download - separate apps means no version conflicts
         proceedWithDownload(buildType);
@@ -347,7 +386,6 @@ public class UpdateActivity extends Activity {
         // Get the latest release download URL in background thread
         executor.execute(() -> {
             try {
-                Log.i(TAG, "Starting GitHub API call in background thread...");
                 runOnUiThread(() -> statusText.setText("Contacting GitHub API..."));
                 
                 String downloadUrl = getReleaseDownloadUrl(buildType);
@@ -587,7 +625,7 @@ public class UpdateActivity extends Activity {
         } catch (Exception e) {
             Log.e(TAG, "Error starting download", e);
             statusText.setText("Error starting download: " + e.getMessage());
-            saveAndInstallButton.setEnabled(true);
+            enableButtons();
             Toast.makeText(this, "Download failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
@@ -634,7 +672,7 @@ public class UpdateActivity extends Activity {
                                 String reasonStr = getDownloadFailureReason(reason);
                                 Log.e(TAG, "Download failed: " + reasonStr);
                                 statusText.setText("Download failed: " + reasonStr);
-                                saveAndInstallButton.setEnabled(true);
+                                enableButtons();
                                 break;
                             case DownloadManager.STATUS_PAUSED:
                                 statusText.setText("Download paused...");
@@ -651,7 +689,7 @@ public class UpdateActivity extends Activity {
                 } else {
                     Log.e(TAG, "Could not query download status - download may have been removed");
                     statusText.setText("Error: Could not check download status");
-                    saveAndInstallButton.setEnabled(true);
+                    enableButtons();
                 }
             }
         };
@@ -694,7 +732,7 @@ public class UpdateActivity extends Activity {
         });
         builder.setNegativeButton("Cancel", (dialog, which) -> {
             statusText.setText("Installation cancelled");
-            saveAndInstallButton.setEnabled(true);
+            enableButtons();
         });
         builder.show();
     }
@@ -729,7 +767,7 @@ public class UpdateActivity extends Activity {
                 });
                 builder.setNegativeButton("Cancel", (dialog, which) -> {
                     statusText.setText("Installation cancelled - permission required");
-                    saveAndInstallButton.setEnabled(true);
+                    enableButtons();
                 });
                 builder.show();
                 return;
@@ -743,7 +781,7 @@ public class UpdateActivity extends Activity {
                 String errorMsg = "Error: External files directory not available";
                 Log.e(TAG, errorMsg);
                 statusText.setText(errorMsg);
-                saveAndInstallButton.setEnabled(true);
+                enableButtons();
                 Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show();
                 return;
             }
@@ -756,7 +794,7 @@ public class UpdateActivity extends Activity {
                 String errorMsg = "Error: Downloaded APK not found at " + apkFile.getAbsolutePath();
                 Log.e(TAG, errorMsg);
                 statusText.setText(errorMsg);
-                saveAndInstallButton.setEnabled(true);
+                enableButtons();
                 Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show();
                 return;
             }
@@ -765,7 +803,7 @@ public class UpdateActivity extends Activity {
                 String errorMsg = "Error: Cannot read APK file (permission issue)";
                 Log.e(TAG, errorMsg);
                 statusText.setText(errorMsg);
-                saveAndInstallButton.setEnabled(true);
+                enableButtons();
                 Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show();
                 return;
             }
@@ -777,7 +815,7 @@ public class UpdateActivity extends Activity {
                 String errorMsg = "Error: APK file too small (" + fileSize + " bytes) - likely download failed";
                 Log.e(TAG, errorMsg);
                 statusText.setText(errorMsg);
-                saveAndInstallButton.setEnabled(true);
+                enableButtons();
                 Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show();
                 return;
             }
@@ -881,7 +919,7 @@ public class UpdateActivity extends Activity {
             } else {
                 Log.e(TAG, "No activity found to handle APK installation intent");
                 statusText.setText("Error: Device cannot install APK files");
-                saveAndInstallButton.setEnabled(true);
+                enableButtons();
                 Toast.makeText(this, "Device does not support APK installation", Toast.LENGTH_LONG).show();
             }
             
@@ -889,7 +927,7 @@ public class UpdateActivity extends Activity {
             Log.e(TAG, "Error installing APK", e);
             String errorMsg = "Error installing APK: " + e.getMessage();
             statusText.setText(errorMsg);
-            saveAndInstallButton.setEnabled(true);
+            enableButtons();
             Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show();
         }
     }
@@ -908,7 +946,7 @@ public class UpdateActivity extends Activity {
                 } else {
                     Log.w(TAG, "Install permission denied");
                     statusText.setText("Installation failed - permission denied");
-                    saveAndInstallButton.setEnabled(true);
+                    enableButtons();
                     Toast.makeText(this, "Installation permission is required to update the app", Toast.LENGTH_LONG).show();
                 }
             }
@@ -926,6 +964,21 @@ public class UpdateActivity extends Activity {
         } else {
             return "com.kidsim.tvkiosk.fileprovider";
         }
+    }
+    
+    /**
+     * Utility method to setup spinner with consistent styling
+     */
+    private void setupSpinner(Spinner spinner, List<String> items, boolean useCustomLayout) {
+        ArrayAdapter<String> adapter;
+        if (useCustomLayout) {
+            adapter = new ArrayAdapter<>(this, R.layout.spinner_item, items);
+            adapter.setDropDownViewResource(R.layout.spinner_dropdown_item);
+        } else {
+            adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, items);
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        }
+        spinner.setAdapter(adapter);
     }
     
     /**

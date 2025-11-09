@@ -4,7 +4,9 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
@@ -15,36 +17,41 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.view.View;
+import android.view.ViewTreeObserver;
 import android.view.WindowManager;
+import android.view.Gravity;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ArrayAdapter;
 import android.widget.Spinner;
+
+import java.util.Map;
+
 import com.kidsim.tvkiosk.config.ConfigurationManager;
 import com.kidsim.tvkiosk.config.DeviceConfig;
 import com.kidsim.tvkiosk.config.DeviceIdManager;
 import com.kidsim.tvkiosk.config.GoogleSheetsConfigLoader;
 import com.kidsim.tvkiosk.config.PageConfig;
 import com.kidsim.tvkiosk.service.WatchdogService;
+import com.kidsim.tvkiosk.utils.ErrorHandler;
+import com.kidsim.tvkiosk.constants.AppConstants;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
 
 public class MainActivity extends Activity implements ConfigurationManager.ConfigUpdateListener {
     
     private static final String TAG = "MainActivity";
-    private static final int MAX_PAGES = 3;
+    // Removed MAX_PAGES - now dynamic based on configuration
     
-    // UI components
+    // UI components - dynamic WebView arrays
     private WebView[] webViews;
     private WebView[] backupWebViews;
+    private FrameLayout webViewContainer;
     private LinearLayout loadingLayout;
     private LinearLayout errorLayout;
     private TextView loadingProgress;
@@ -61,24 +68,22 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     
     // Handlers for timing
     private Handler pageHandler;
-    private Handler configHandler;
     private Handler retryHandler;
     private Handler refreshHandler;
+    private Handler configRefreshHandler; // For config refresh timer
     
     // Background tasks
     private ExecutorService executor;
     
     // Runnables
     private Runnable pageRotationRunnable;
-    private Runnable configUpdateRunnable;
     private Runnable retryRunnable;
     private Runnable refreshRunnable;
+    private Runnable configRefreshRunnable; // For config refresh
     
     // State tracking
     private boolean isErrorState = false;
-    private long lastConfigUpdate = 0;
-    private static final long CONFIG_UPDATE_INTERVAL = 3600000; // 1 hour
-    private static final long RETRY_INTERVAL = 300000; // 5 minutes
+    private static final long RETRY_INTERVAL = AppConstants.RETRY_INTERVAL_MS;
     
     // WebView pool management
     private boolean[] pageLoadStates;
@@ -88,7 +93,7 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     private boolean isRefreshing = false;
     private int refreshPageIndex = 0;
     private long lastRefreshTime = 0;
-    private static final long REFRESH_INTERVAL = 10 * 60 * 1000; // 10 minutes
+    private static final long REFRESH_INTERVAL = AppConstants.REFRESH_INTERVAL_MS;
     
     // Connectivity
     private boolean isNetworkAvailable = true;
@@ -97,20 +102,19 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        Log.i(TAG, "MainActivity starting");
+        ErrorHandler.logActivityStart(TAG, "MainActivity");
         
         // Initialize handlers
         pageHandler = new Handler(Looper.getMainLooper());
-        configHandler = new Handler(Looper.getMainLooper());
         retryHandler = new Handler(Looper.getMainLooper());
         refreshHandler = new Handler(Looper.getMainLooper());
+        configRefreshHandler = new Handler(Looper.getMainLooper());
         
         // Initialize background executor
         executor = Executors.newSingleThreadExecutor();
         
-        // Initialize WebView pool arrays
-        pageLoadStates = new boolean[3];
-        backupPageLoadStates = new boolean[3];
+        // WebView arrays will be initialized dynamically based on page count
+        // pageLoadStates and backupPageLoadStates will be created in setupWebViewsForPages()
         
         // Setup kiosk mode
         setupKioskMode();
@@ -147,17 +151,11 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     }
     
     private void initializeViews() {
-        // Initialize WebView pools
-        webViews = new WebView[3];
-        backupWebViews = new WebView[3];
+        // Get the WebView container for dynamic WebView creation
+        webViewContainer = findViewById(R.id.webViewContainer);
         
-        webViews[0] = findViewById(R.id.webView0);
-        webViews[1] = findViewById(R.id.webView1);
-        webViews[2] = findViewById(R.id.webView2);
-        
-        backupWebViews[0] = findViewById(R.id.backupWebView0);
-        backupWebViews[1] = findViewById(R.id.backupWebView1);
-        backupWebViews[2] = findViewById(R.id.backupWebView2);
+        // WebView arrays will be created dynamically based on page count
+        // Remove fixed WebView initialization - they'll be created programmatically
         
         // Initialize loading UI
         loadingLayout = findViewById(R.id.loadingLayout);
@@ -169,10 +167,104 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         retryButton = findViewById(R.id.retryButton);
         updateButton = findViewById(R.id.updateButton);
         
-        // Setup WebView pool
-        setupWebViewPool();
+        // Setup WebView pool will be called dynamically when configuration is loaded
         setupErrorHandling();
         setupUpdateButton();
+    }
+    
+    private void setupWebViewsForPages(int pageCount) {
+        Log.i(TAG, "Setting up " + pageCount + " WebViews dynamically");
+        
+        // Get device dimensions upfront
+        int deviceWidth = getResources().getDisplayMetrics().widthPixels;
+        int deviceHeight = getResources().getDisplayMetrics().heightPixels;
+        Log.d(TAG, "Device dimensions: " + deviceWidth + "x" + deviceHeight);
+        
+        // Clear any existing WebViews from the container
+        webViewContainer.removeAllViews();
+        
+        // Create arrays based on actual page count
+        webViews = new WebView[pageCount];
+        backupWebViews = new WebView[pageCount];
+        pageLoadStates = new boolean[pageCount];
+        backupPageLoadStates = new boolean[pageCount];
+        
+        // Create WebViews programmatically
+        for (int i = 0; i < pageCount; i++) {
+            // Create main WebView with rotation applied immediately
+            webViews[i] = createRotatedWebView("Main-" + i, deviceWidth, deviceHeight);
+            webViewContainer.addView(webViews[i]);
+            
+            // Create backup WebView with rotation applied immediately
+            backupWebViews[i] = createRotatedWebView("Backup-" + i, deviceWidth, deviceHeight);
+            webViewContainer.addView(backupWebViews[i]);
+            
+            // Initialize load states
+            pageLoadStates[i] = false;
+            backupPageLoadStates[i] = false;
+            
+            Log.d(TAG, "Created rotated WebView pair " + i + " for page " + i);
+        }
+        
+        // Setup refresh monitoring
+        setupRefreshMonitoring();
+    }
+    
+    private WebView createRotatedWebView(String tag, int deviceWidth, int deviceHeight) {
+        // Create WebView
+        WebView webView = new WebView(this);
+        
+        // Read orientation from SharedPreferences (local device setting), not from Google Sheets config
+        SharedPreferences preferences = getSharedPreferences("KioskUpdatePrefs", MODE_PRIVATE);
+        String localOrientation = preferences.getString("orientation", "Landscape");
+        boolean shouldRotate = "Portrait".equalsIgnoreCase(localOrientation);
+        
+        Log.d(TAG, "Creating WebView " + tag + " - Local orientation setting: '" + localOrientation + "' (shouldRotate=" + shouldRotate + ")");
+        Log.d(TAG, "Orientation comparison: localOrientation='" + localOrientation + "', Portrait check=" + "Portrait".equalsIgnoreCase(localOrientation));
+        Log.d(TAG, "Device dimensions: " + deviceWidth + "x" + deviceHeight);
+        
+        FrameLayout.LayoutParams layoutParams;
+        
+        if (!shouldRotate) {
+            // Setting is Landscape - no rotation needed
+            layoutParams = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            );
+            webView.setLayoutParams(layoutParams);
+            
+            // Ensure no rotation is applied
+            webView.setRotation(0f);
+            webView.setScaleX(1.0f);
+            webView.setScaleY(1.0f);
+            
+            Log.d(TAG, "Created landscape WebView " + tag + " with MATCH_PARENT dimensions (no rotation)");
+        } else {
+            // Setting is Portrait - apply rotation for landscape content
+            layoutParams = new FrameLayout.LayoutParams(
+                deviceHeight,  // Use device height as width (for landscape content on portrait setting)
+                deviceWidth    // Use device width as height (for landscape content on portrait setting)
+            );
+            layoutParams.gravity = android.view.Gravity.CENTER;
+            webView.setLayoutParams(layoutParams);
+            
+            // Apply rotation
+            webView.setRotation(90f);
+            webView.setPivotX(deviceHeight / 2f);
+            webView.setPivotY(deviceWidth / 2f);
+            
+            Log.d(TAG, "Created rotated WebView " + tag + " with dimensions " + deviceHeight + "x" + deviceWidth + " (rotated from " + deviceWidth + "x" + deviceHeight + " for portrait setting)");
+            Log.d(TAG, "Rotation details: rotation=90f, pivotX=" + (deviceHeight / 2f) + ", pivotY=" + (deviceWidth / 2f));
+        }
+        
+        // Set properties
+        webView.setVisibility(View.GONE);
+        webView.setBackgroundColor(android.graphics.Color.BLACK);
+        
+        // Setup WebView instance
+        setupWebViewInstance(webView, tag);
+        
+        return webView;
     }
     
     private void setupWebViewPool() {
@@ -268,7 +360,7 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     
     private void markPageLoaded(WebView webView) {
         // Find which WebView this is and mark as loaded
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < pages.size(); i++) {
             if (webViews[i] == webView) {
                 pageLoadStates[i] = true;
                 pagesLoaded++;
@@ -284,16 +376,17 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
             }
         }
         
-        // Check if initial load is complete
-        if (!initialLoadComplete && pagesLoaded >= 1) {
+        // Check if initial load is complete - wait for ALL pages to load
+        if (!initialLoadComplete && pagesLoaded >= pages.size()) {
             initialLoadComplete = true;
             showFirstPage();
+            Log.i(TAG, "All " + pages.size() + " pages loaded - showing first page");
         }
     }
     
     private void markPageFailed(WebView webView) {
         // Find which WebView this is and mark as failed
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < pages.size(); i++) {
             if (webViews[i] == webView) {
                 pageLoadStates[i] = false;
                 Log.w(TAG, "Main WebView " + i + " failed to load");
@@ -307,35 +400,39 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     }
     
     private void showFirstPage() {
-        // Show the first successfully loaded page
-        for (int i = 0; i < 3; i++) {
-            if (pageLoadStates[i]) {
-                currentPageIndex = i;
-                showPage(i);
-                hideErrorState();
-                hideLoadingState();  // Hide loading UI when first page is ready
-                Log.i(TAG, "Showing first loaded page: " + i);
-                return;
-            }
+        // All pages should be loaded by now, show page 0 and start rotation
+        if (pages.size() > 0) {
+            currentPageIndex = 0;
+            showPage(0);
+            hideErrorState();
+            hideLoadingState();
+            
+            // Start the page rotation timer
+            setupPageRotationTimer();
+            
+            Log.i(TAG, "All pages loaded - showing page 0 and starting rotation");
+        } else {
+            showError("No pages available to display");
         }
-        
-        // If no pages loaded successfully, show error
-        showError("No pages could be loaded");
     }
     
     private void showPage(int pageIndex) {
         // Hide all pages first
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < pages.size(); i++) {
             webViews[i].setVisibility(View.GONE);
             backupWebViews[i].setVisibility(View.GONE);
         }
         
-        // Show the requested page
-        if (pageIndex >= 0 && pageIndex < 3) {
-            webViews[pageIndex].setVisibility(View.VISIBLE);
-            currentPageIndex = pageIndex;
-            Log.d(TAG, "Showing page: " + pageIndex);
+        if (pageIndex < 0 || pageIndex >= pages.size()) {
+            Log.w(TAG, "Invalid page index: " + pageIndex);
+            return;
         }
+        
+        // Show the requested page directly - each page has its own WebView
+        webViews[pageIndex].setVisibility(View.VISIBLE);
+        currentPageIndex = pageIndex;
+        
+        Log.d(TAG, "Showing page: " + pageIndex + " in dedicated WebView " + pageIndex);
     }
     
     private void checkForRefresh() {
@@ -392,7 +489,7 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         refreshHandler.postDelayed(() -> {
             refreshPageIndex++;
             refreshNextPage();
-        }, 5000); // 5 second delay between page refreshes
+        }, AppConstants.PAGE_ROTATION_DELAY_MS); // 5 second delay between page refreshes
     }
     
     private void swapToRefreshedPages() {
@@ -426,25 +523,27 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         pagesLoaded = 0;
         initialLoadComplete = false;
         
-        for (int i = 0; i < 3; i++) {
+        // Initialize all load states to false
+        for (int i = 0; i < pages.size(); i++) {
             pageLoadStates[i] = false;
             backupPageLoadStates[i] = false;
         }
         
-        // Show loading state
+        // Show loading state initially
         showLoadingState();
         
-        // Load up to 3 pages into the WebView pool
-        int pagesToLoad = Math.min(pages.size(), 3);
-        for (int i = 0; i < pagesToLoad; i++) {
+        // Load ALL pages into their corresponding WebViews
+        for (int i = 0; i < pages.size(); i++) {
             loadPageIntoWebView(i);
         }
         
-        Log.i(TAG, "Loading " + pagesToLoad + " pages into WebView pool");
+        // Don't show any pages yet - wait for all to load
+        // The first page will be shown in onPageFinished when all pages are loaded
+        Log.i(TAG, "Loading " + pages.size() + " pages into " + pages.size() + " WebViews, will show page 0 when all are loaded");
     }
     
     private void loadPageIntoWebView(int webViewIndex) {
-        if (webViewIndex >= 3 || webViewIndex >= pages.size()) {
+        if (webViewIndex >= pages.size()) {
             return;
         }
         
@@ -478,25 +577,27 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     }
     
     private void setupPageRotationTimer() {
-        // Use the first page's display time for timing
+        // Stop any existing timer first to prevent overlapping timers
+        if (pageHandler != null && pageRotationRunnable != null) {
+            pageHandler.removeCallbacks(pageRotationRunnable);
+        }
+        
+        // Use the current page's display time for timing
         PageConfig currentPage = pages.get(currentPageIndex);
-        long displayTime = currentPage.getDisplayTimeSeconds() * 1000L;
+        long displayTime = currentPage.getDisplayTimeSeconds() * AppConstants.SECONDS_TO_MILLISECONDS;
         
         pageRotationRunnable = () -> {
-            // Move to next page
-            int nextPageIndex = (currentPageIndex + 1) % Math.min(pages.size(), 3);
+            // Move to next page - cycle through ALL pages, not limited by WebView count
+            int nextPageIndex = (currentPageIndex + 1) % pages.size();
             
-            // Switch to next page if it's loaded
-            if (pageLoadStates[nextPageIndex]) {
-                showPage(nextPageIndex);
-                currentPageIndex = nextPageIndex;
-                
-                // Schedule next rotation
-                setupPageRotationTimer();
-            } else {
-                Log.w(TAG, "Next page " + nextPageIndex + " not ready, retrying in 5 seconds");
-                pageHandler.postDelayed(this::setupPageRotationTimer, 5000);
-            }
+            // Always switch to next page - loading state doesn't matter
+            showPage(nextPageIndex);
+            currentPageIndex = nextPageIndex;
+            
+            Log.d(TAG, "Rotated to page " + nextPageIndex + " of " + pages.size() + " total pages");
+            
+            // Schedule next rotation
+            setupPageRotationTimer();
         };
         
         pageHandler.postDelayed(pageRotationRunnable, displayTime);
@@ -530,7 +631,7 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
             
             return connected;
         } catch (Exception e) {
-            Log.e(TAG, "Error checking network connectivity", e);
+            ErrorHandler.logError(TAG, "Error checking network connectivity", e);
             return false;
         }
     }
@@ -539,14 +640,14 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     
     private void setupErrorHandling() {
         retryButton.setOnClickListener(v -> {
-            Log.i(TAG, "Retry button clicked");
+            ErrorHandler.logUserAction(TAG, "Retry button");
             retryCurrentPage();
         });
     }
     
     private void setupUpdateButton() {
         updateButton.setOnClickListener(v -> {
-            Log.i(TAG, "Update button clicked");
+            ErrorHandler.logUserAction(TAG, "Update button");
             openUpdateDownloader();
         });
         
@@ -572,7 +673,7 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     private void openUpdateDownloader() {
         try {
             // GitHub release URL for test APK download
-            String testApkUrl = "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/latest/download/app-test.apk";
+            String testApkUrl = AppConstants.GitHub.TEST_APK_URL;
             
             // Try to open with Downloader app (common on Android TV)
             Intent downloaderIntent = new Intent(Intent.ACTION_VIEW);
@@ -596,29 +697,24 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     }
     
     private void loadConfiguration() {
-        currentConfig = configManager.getCurrentConfig();
-        applyConfiguration(currentConfig);
+        String deviceId = deviceIdManager.getDeviceId();
+        if (deviceId == null || deviceId.isEmpty()) {
+            String message = "No device ID configured. Please configure device ID first.";
+            Log.i(TAG, message);
+            showError(message);
+            return;
+        }
         
-        // Try to update from GitHub
-        configManager.updateConfigFromGitHub(null);
+        // Always load fresh configuration from Google Sheets
+        Log.i(TAG, "Loading configuration from Google Sheets for device: " + deviceId);
+        configManager.loadConfigurationFromGoogleSheets(deviceId);
+        
+        // Note: Configuration will be applied via onConfigurationUpdated callback
+        // or error will be shown via onConfigurationError callback
     }
     
     private void applyConfiguration(DeviceConfig config) {
         Log.i(TAG, "Applying configuration for device: " + config.getDeviceName());
-        
-        // Apply orientation
-        applyOrientation(config.getOrientation());
-        
-        // Check network connectivity and update cache modes
-        isNetworkConnected();
-        for (int i = 0; i < 3; i++) {
-            if (webViews[i] != null) {
-                updateWebViewCacheMode(webViews[i].getSettings());
-            }
-            if (backupWebViews[i] != null) {
-                updateWebViewCacheMode(backupWebViews[i].getSettings());
-            }
-        }
         
         // Setup pages
         pages = config.getPages();
@@ -628,25 +724,178 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
             return;
         }
         
+        // Setup WebViews dynamically based on page count
+        setupWebViewsForPages(pages.size());
+        
+        // Apply orientation AFTER WebViews are created
+        SharedPreferences preferences = getSharedPreferences("KioskUpdatePrefs", MODE_PRIVATE);
+        
+        // Debug: Show all SharedPreferences values
+        Map<String, ?> allPrefs = preferences.getAll();
+        Log.d(TAG, "All SharedPreferences values:");
+        for (Map.Entry<String, ?> entry : allPrefs.entrySet()) {
+            Log.d(TAG, "  " + entry.getKey() + " = '" + entry.getValue() + "'");
+        }
+        
+        String localOrientation = preferences.getString("orientation", "Landscape");
+        Log.d(TAG, "Reading orientation key directly: '" + localOrientation + "'");
+        
+        // Note: Orientation already applied during WebView creation, no need to apply again
+        Log.d(TAG, "Orientation '" + localOrientation + "' was applied during WebView creation");
+        
+        // Check network connectivity and update cache modes for all WebViews
+        isNetworkConnected();
+        for (int i = 0; i < pages.size(); i++) {
+            if (webViews[i] != null) {
+                updateWebViewCacheMode(webViews[i].getSettings());
+            }
+            if (backupWebViews[i] != null) {
+                updateWebViewCacheMode(backupWebViews[i].getSettings());
+            }
+        }
+        
         // Load pages into WebView pool
         loadPagesIntoPool();
         
         // Start page rotation timer
         startPageRotationTimer();
         
+        // Start configuration refresh timer
+        startConfigurationRefreshTimer();
+        
         Log.i(TAG, "Configuration applied with " + pages.size() + " pages, network: " + 
               (isNetworkAvailable ? "CONNECTED" : "OFFLINE"));
     }
     
-    private void applyOrientation(String orientation) {
-        int orientationValue = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE;
-        
-        if ("portrait".equalsIgnoreCase(orientation)) {
-            orientationValue = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT;
+    private void startConfigurationRefreshTimer() {
+        if (currentConfig == null) {
+            return;
         }
         
-        setRequestedOrientation(orientationValue);
-        Log.d(TAG, "Set orientation to: " + orientation);
+        // Stop any existing config refresh timer
+        if (configRefreshRunnable != null) {
+            configRefreshHandler.removeCallbacks(configRefreshRunnable);
+        }
+        
+        // Get refresh interval in minutes, convert to milliseconds
+        long refreshIntervalMs = currentConfig.getRefreshIntervalMinutes() * 60 * 1000L;
+        
+        configRefreshRunnable = () -> {
+            Log.i(TAG, "Attempting to refresh configuration from Google Sheets");
+            String deviceId = deviceIdManager.getDeviceId();
+            if (deviceId != null && !deviceId.isEmpty()) {
+                // Try to refresh config - if it fails, we keep current config and try again later
+                configManager.loadConfigurationFromGoogleSheets(deviceId);
+            }
+            
+            // Schedule next refresh (will be rescheduled if config updates)
+            configRefreshHandler.postDelayed(configRefreshRunnable, refreshIntervalMs);
+        };
+        
+        // Schedule first refresh
+        configRefreshHandler.postDelayed(configRefreshRunnable, refreshIntervalMs);
+        Log.i(TAG, "Configuration refresh scheduled every " + currentConfig.getRefreshIntervalMinutes() + " minutes");
+    }
+    
+    private void applyOrientation(String orientation) {
+        // Don't set device orientation - let device stay in natural orientation
+        // Instead, rotate WebView content if portrait is requested
+        
+        if ("portrait".equalsIgnoreCase(orientation)) {
+            // Apply WebView rotation for portrait content
+            applyWebViewRotation(true);
+            Log.d(TAG, "Applied portrait rotation to WebViews, device stays in natural orientation");
+        } else {
+            // Default landscape - no rotation needed
+            applyWebViewRotation(false);
+            Log.d(TAG, "Applied landscape orientation to WebViews (no rotation)");
+        }
+    }
+    
+    private void applyWebViewRotation(boolean isPortrait) {
+        if (webViews == null) {
+            Log.d(TAG, "WebViews not initialized yet, orientation will be applied after setup");
+            return;
+        }
+        
+        Log.d(TAG, "Applying " + (isPortrait ? "portrait" : "landscape") + " orientation to all WebViews");
+        
+        for (int i = 0; i < webViews.length; i++) {
+            if (webViews[i] != null) {
+                applyRotationToWebView(webViews[i], isPortrait);
+            }
+            if (backupWebViews != null && i < backupWebViews.length && backupWebViews[i] != null) {
+                applyRotationToWebView(backupWebViews[i], isPortrait);
+            }
+        }
+        
+        Log.d(TAG, "Orientation applied to all WebViews - they will maintain rotation when shown/hidden");
+    }
+    
+    private void applyRotationToWebView(WebView webView, boolean isPortrait) {
+        if (isPortrait) {
+            // Use a post to ensure WebView is fully laid out
+            webView.post(() -> {
+                if (webView.getWidth() > 0 && webView.getHeight() > 0) {
+                    applyPortraitRotationNow(webView);
+                } else {
+                    // Use ViewTreeObserver if dimensions aren't available yet
+                    webView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+                        @Override
+                        public void onGlobalLayout() {
+                            if (webView.getWidth() > 0 && webView.getHeight() > 0) {
+                                webView.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                                applyPortraitRotationNow(webView);
+                            }
+                        }
+                    });
+                }
+            });
+        } else {
+            // Reset to normal landscape orientation
+            webView.setRotation(0f);
+            webView.setScaleX(1.0f);
+            webView.setScaleY(1.0f);
+            
+            // Reset layout params to match parent
+            FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) webView.getLayoutParams();
+            layoutParams.width = FrameLayout.LayoutParams.MATCH_PARENT;
+            layoutParams.height = FrameLayout.LayoutParams.MATCH_PARENT;
+            layoutParams.gravity = android.view.Gravity.NO_GRAVITY;
+            webView.setLayoutParams(layoutParams);
+            
+            Log.d(TAG, "Reset WebView to landscape orientation (no rotation)");
+        }
+    }
+    
+    private void applyPortraitRotationNow(WebView webView) {
+        int width = webView.getWidth();
+        int height = webView.getHeight();
+        
+        Log.d(TAG, "WebView dimensions: " + width + "x" + height + " before rotation");
+        
+        // For portrait rotation, we need to swap dimensions
+        // The device is landscape (e.g., 2400x1080), but we want portrait content
+        // So we need to fit portrait content (1080 width) into landscape space
+        
+        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) webView.getLayoutParams();
+        
+        // Swap width and height for portrait content
+        layoutParams.width = height;  // Use original height as new width
+        layoutParams.height = width;  // Use original width as new height
+        
+        // Center the rotated WebView
+        layoutParams.gravity = android.view.Gravity.CENTER;
+        
+        webView.setLayoutParams(layoutParams);
+        
+        // Apply rotation around center
+        webView.setRotation(90f);
+        webView.setPivotX(height / 2f);  // Pivot based on new dimensions
+        webView.setPivotY(width / 2f);
+        
+        Log.d(TAG, "Applied 90-degree rotation to WebView for portrait content");
+        Log.d(TAG, "Swapped dimensions from " + width + "x" + height + " to " + height + "x" + width);
     }
     
     private void stopPageRotation() {
@@ -656,16 +905,9 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     }
     
     private void setupConfigurationUpdates() {
-        configUpdateRunnable = () -> {
-            Log.d(TAG, "Periodic configuration update");
-            configManager.updateConfigFromGitHub(null);
-            
-            // Schedule next update
-            configHandler.postDelayed(configUpdateRunnable, CONFIG_UPDATE_INTERVAL);
-        };
-        
-        // Start periodic updates
-        configHandler.postDelayed(configUpdateRunnable, CONFIG_UPDATE_INTERVAL);
+        // Configuration updates are now handled only through UpdateActivity
+        // No automatic GitHub configuration fetching since we use Google Sheets
+        Log.d(TAG, "Configuration updates disabled - use UpdateActivity for manual updates");
     }
     
     private void startWatchdogService() {
@@ -692,19 +934,31 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     private void showError(String message) {
         isErrorState = true;
         
-        // Hide loading and WebViews
+        // Hide loading state
         hideLoadingState();
-        for (int i = 0; i < 3; i++) {
-            webViews[i].setVisibility(View.GONE);
-            backupWebViews[i].setVisibility(View.GONE);
+        
+        // Hide WebViews only if they exist
+        if (webViews != null) {
+            for (int i = 0; i < webViews.length; i++) {
+                if (webViews[i] != null) {
+                    webViews[i].setVisibility(View.GONE);
+                }
+                if (backupWebViews[i] != null) {
+                    backupWebViews[i].setVisibility(View.GONE);
+                }
+            }
         }
         
         // Show error UI
-        errorText.setVisibility(View.VISIBLE);
-        errorText.setText(message);
-        retryButton.setVisibility(View.VISIBLE);
+        if (errorText != null) {
+            errorText.setVisibility(View.VISIBLE);
+            errorText.setText(message);
+        }
+        if (retryButton != null) {
+            retryButton.setVisibility(View.VISIBLE);
+        }
         
-        Log.e(TAG, "Showing error: " + message);
+        ErrorHandler.logError(TAG, "Showing error: " + message);
         
         // Schedule automatic retry
         scheduleAutomaticRetry();
@@ -746,8 +1000,8 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     
     private void updateLoadingProgress() {
         if (loadingProgress != null && pages != null) {
-            int totalPages = Math.min(pages.size(), 3);
-            String progressText = pagesLoaded + "/" + totalPages + " pages loaded";
+            // Show progress for all pages, not limited by WebView count
+            String progressText = pagesLoaded + "/" + pages.size() + " pages loaded";
             loadingProgress.setText(progressText);
             Log.d(TAG, "Loading progress: " + progressText);
         }
@@ -792,13 +1046,20 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         super.onResume();
         hideSystemUI();
         
-        // Resume all WebViews in the pool
-        for (int i = 0; i < 3; i++) {
-            if (webViews[i] != null) {
-                webViews[i].onResume();
+        // Resume all WebViews in the dynamic lists
+        if (webViews != null) {
+            for (WebView webView : webViews) {
+                if (webView != null) {
+                    webView.onResume();
+                }
             }
-            if (backupWebViews[i] != null) {
-                backupWebViews[i].onResume();
+        }
+        
+        if (backupWebViews != null) {
+            for (WebView webView : backupWebViews) {
+                if (webView != null) {
+                    webView.onResume();
+                }
             }
         }
     }
@@ -807,13 +1068,20 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     protected void onPause() {
         super.onPause();
         
-        // Pause all WebViews in the pool
-        for (int i = 0; i < 3; i++) {
-            if (webViews[i] != null) {
-                webViews[i].onPause();
+        // Pause all WebViews in the dynamic lists
+        if (webViews != null) {
+            for (WebView webView : webViews) {
+                if (webView != null) {
+                    webView.onPause();
+                }
             }
-            if (backupWebViews[i] != null) {
-                backupWebViews[i].onPause();
+        }
+        
+        if (backupWebViews != null) {
+            for (WebView webView : backupWebViews) {
+                if (webView != null) {
+                    webView.onPause();
+                }
             }
         }
     }
@@ -822,13 +1090,14 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     protected void onDestroy() {
         super.onDestroy();
         
-        Log.i(TAG, "MainActivity destroying");
+        ErrorHandler.logActivityEnd(TAG, "MainActivity");
         
         // Clean up handlers
         stopPageRotation();
         
-        if (configHandler != null && configUpdateRunnable != null) {
-            configHandler.removeCallbacks(configUpdateRunnable);
+        // Stop configuration refresh timer
+        if (configRefreshRunnable != null) {
+            configRefreshHandler.removeCallbacks(configRefreshRunnable);
         }
         
         if (retryHandler != null && retryRunnable != null) {
@@ -882,19 +1151,16 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     
     /**
      * Check device ID configuration and proceed with kiosk loading
-     * MainActivity now bypasses setup - setup is only done via UpdateActivity
+     * MainActivity now shows "No configuration" if not configured via UpdateActivity
      */
     private void checkDeviceIdConfiguration() {
         if (!deviceIdManager.isDeviceIdConfigured()) {
-            Log.i(TAG, "Device ID not configured, using default configuration for kiosk");
-            // Set a default device ID so the kiosk can load
-            deviceIdManager.setDeviceId("DefaultKiosk");
-            Log.i(TAG, "Set default device ID: DefaultKiosk");
+            Log.i(TAG, "Device ID not configured, will show no configuration message");
         } else {
-            Log.i(TAG, "Device ID already configured: " + deviceIdManager.getDeviceId());
+            Log.i(TAG, "Device ID configured: " + deviceIdManager.getDeviceId());
         }
         
-        // Always load the kiosk - no redirection to UpdateActivity
+        // Always try to load configuration - will show appropriate message if none found
         loadConfiguration();
     }
     
@@ -917,10 +1183,7 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         List<String> orientations = new ArrayList<>();
         orientations.add("Landscape");
         orientations.add("Portrait");
-        ArrayAdapter<String> orientationAdapter = new ArrayAdapter<>(this, 
-            android.R.layout.simple_spinner_item, orientations);
-        orientationAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        orientationSpinner.setAdapter(orientationAdapter);
+        setupSpinner(orientationSpinner, orientations, false);
         layout.addView(orientationSpinner);
         
         // Add some spacing
@@ -1024,82 +1287,57 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
      * Load available device IDs from Google Sheets for setup dialog
      */
     private void loadDeviceIdsForSetup(Spinner spinner) {
+        // Use Google Sheets API to load device IDs
+        ConfigurationManager configManager = new ConfigurationManager(this);
+        GoogleSheetsConfigLoader sheetsLoader = new GoogleSheetsConfigLoader(
+            configManager.getGoogleSheetsId(), 
+            configManager.getGoogleSheetsApiKey()
+        );
+        
         // Set loading message while fetching device IDs
         List<String> loadingList = new ArrayList<>();
         loadingList.add("Loading device IDs...");
-        ArrayAdapter<String> loadingAdapter = new ArrayAdapter<>(this, 
-            android.R.layout.simple_spinner_item, loadingList);
-        loadingAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinner.setAdapter(loadingAdapter);
+        setupSpinner(spinner, loadingList, false);
         
-        // Fetch device IDs in background
-        executor.execute(() -> {
-            try {
-                List<String> deviceIds = fetchDeviceIdsFromGoogleSheets();
-                
+        // Fetch device IDs in background using Google Sheets API
+        sheetsLoader.loadAvailableDeviceIds(new GoogleSheetsConfigLoader.DeviceListListener() {
+            @Override
+            public void onDeviceListLoaded(List<String> deviceIds) {
                 runOnUiThread(() -> {
-                    ArrayAdapter<String> adapter = new ArrayAdapter<>(this, 
-                        android.R.layout.simple_spinner_item, deviceIds);
-                    adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                    spinner.setAdapter(adapter);
+                    setupSpinner(spinner, deviceIds, false);
                 });
-                
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to load device IDs for setup", e);
+            }
+            
+            @Override
+            public void onDeviceListFailed(String error) {
+                Log.e(TAG, "Failed to load device IDs for setup: " + error);
                 runOnUiThread(() -> {
-                    // Use fallback device IDs
+                    // Use fallback device IDs based on the test
                     List<String> fallbackIds = new ArrayList<>();
-                    fallbackIds.add("Test");
-                    fallbackIds.add("Production");
-                    fallbackIds.add("Lobby");
+                    fallbackIds.add("Test1");
+                    fallbackIds.add("Test2");
                     
-                    ArrayAdapter<String> adapter = new ArrayAdapter<>(this, 
-                        android.R.layout.simple_spinner_item, fallbackIds);
-                    adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                    spinner.setAdapter(adapter);
+                    setupSpinner(spinner, fallbackIds, false);
                     
-                    Toast.makeText(this, "Using fallback device IDs", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, "Using fallback device IDs", Toast.LENGTH_SHORT).show();
                 });
             }
         });
     }
     
     /**
-     * Fetch device IDs from Google Sheets
+     * Utility method to setup spinner with consistent styling
      */
-    private List<String> fetchDeviceIdsFromGoogleSheets() throws Exception {
-        List<String> deviceIds = new ArrayList<>();
-        String csvUrl = "https://docs.google.com/spreadsheets/d/1vWzoYpMDIwfpAuwChbwinmoZxqwelO64ODOS97b27ag/export?format=csv&gid=0";
-        
-        URL url = new URL(csvUrl);
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        connection.setRequestMethod("GET");
-        connection.setConnectTimeout(10000);
-        connection.setReadTimeout(10000);
-        
-        BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-        String line;
-        boolean firstRow = true;
-        
-        while ((line = reader.readLine()) != null) {
-            if (firstRow) {
-                firstRow = false;
-                continue; // Skip header row
-            }
-            
-            String[] parts = line.split(",");
-            if (parts.length >= 2 && !parts[1].trim().isEmpty()) {
-                String deviceId = parts[1].trim().replace("\"", "");
-                if (!deviceId.equalsIgnoreCase("DeviceID")) {
-                    deviceIds.add(deviceId);
-                }
-            }
+    private void setupSpinner(Spinner spinner, List<String> items, boolean useCustomLayout) {
+        ArrayAdapter<String> adapter;
+        if (useCustomLayout) {
+            adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, items);
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        } else {
+            adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, items);
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         }
-        
-        reader.close();
-        connection.disconnect();
-        
-        Log.i(TAG, "Loaded " + deviceIds.size() + " device IDs from Google Sheets for setup");
-        return deviceIds;
+        spinner.setAdapter(adapter);
     }
+    
 }

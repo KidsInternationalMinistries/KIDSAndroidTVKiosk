@@ -10,6 +10,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import com.kidsim.tvkiosk.utils.ErrorHandler;
+import com.kidsim.tvkiosk.utils.JsonUtils;
 
 public class GoogleSheetsConfigLoader {
     private static final String TAG = "GoogleSheetsLoader";
@@ -19,6 +21,17 @@ public class GoogleSheetsConfigLoader {
     
     // Google Sheets API v4 endpoints
     private static final String SHEETS_API_BASE = "https://sheets.googleapis.com/v4/spreadsheets/";
+    
+    /**
+     * Utility method to handle API error responses consistently
+     */
+    private boolean handleApiError(int responseCode, String operation) {
+        if (responseCode != HttpURLConnection.HTTP_OK) {
+            ErrorHandler.logApiError(TAG, operation, responseCode);
+            return false;
+        }
+        return true;
+    }
     
     public interface ConfigLoadListener {
         void onConfigLoaded(DeviceConfig config);
@@ -49,7 +62,7 @@ public class GoogleSheetsConfigLoader {
                     listener.onConfigLoadFailed("Failed to parse device configuration");
                 }
             } catch (Exception e) {
-                Log.e(TAG, "Error loading config from Google Sheets", e);
+                String errorMessage = ErrorHandler.logError(TAG, "Error loading config from Google Sheets", e);
                 listener.onConfigLoadFailed("Network error: " + e.getMessage());
             }
         });
@@ -70,7 +83,7 @@ public class GoogleSheetsConfigLoader {
                     listener.onDeviceListFailed("No device IDs found in sheet");
                 }
             } catch (Exception e) {
-                Log.e(TAG, "Error loading device IDs", e);
+                ErrorHandler.logError(TAG, "Error loading device IDs", e);
                 listener.onDeviceListFailed("Network error: " + e.getMessage());
             }
         });
@@ -124,48 +137,6 @@ public class GoogleSheetsConfigLoader {
             
         } catch (Exception e) {
             Log.e(TAG, "Error getting device IDs from sheet tabs", e);
-            return null;
-        }
-    }
-    
-    private String getFirstSheetName() {
-        try {
-            String url = SHEETS_API_BASE + sheetsId + "?key=" + apiKey;
-            
-            URL apiUrl = new URL(url);
-            HttpURLConnection connection = (HttpURLConnection) apiUrl.openConnection();
-            connection.setRequestMethod("GET");
-            connection.setRequestProperty("Accept", "application/json");
-            connection.setConnectTimeout(10000);
-            connection.setReadTimeout(10000);
-            
-            int responseCode = connection.getResponseCode();
-            if (responseCode != HttpURLConnection.HTTP_OK) {
-                return null;
-            }
-            
-            BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                response.append(line);
-            }
-            reader.close();
-            connection.disconnect();
-            
-            org.json.JSONObject spreadsheet = new org.json.JSONObject(response.toString());
-            org.json.JSONArray sheets = spreadsheet.getJSONArray("sheets");
-            
-            if (sheets.length() > 0) {
-                org.json.JSONObject sheet = sheets.getJSONObject(0);
-                org.json.JSONObject properties = sheet.getJSONObject("properties");
-                return properties.getString("title");
-            }
-            
-            return null;
-            
-        } catch (Exception e) {
-            Log.e(TAG, "Error getting first sheet name", e);
             return null;
         }
     }
@@ -266,8 +237,14 @@ public class GoogleSheetsConfigLoader {
     private DeviceConfig parseDeviceConfigFromCsv(String deviceId, List<String> csvLines) {
         try {
             if (csvLines.size() < 5) {
-                Log.e(TAG, "Sheet too short, expected at least 5 rows");
+                Log.e(TAG, "Sheet too short, expected at least 5 rows, got: " + csvLines.size());
                 return null;
+            }
+            
+            // Debug: Log all raw CSV lines to see what we're parsing
+            Log.d(TAG, "Raw CSV data for device " + deviceId + ":");
+            for (int i = 0; i < csvLines.size(); i++) {
+                Log.d(TAG, "Row " + (i + 1) + ": " + csvLines.get(i));
             }
             
             // Parse configuration from your sheet structure:
