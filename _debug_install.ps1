@@ -50,8 +50,8 @@ if (-not (Test-Path $sourceApk)) {
 Copy-Item $sourceApk $targetApk -Force
 Write-Host "APK copied to $targetApk" -ForegroundColor Green
 
-# Install on device
-Write-Host "Installing on device..." -ForegroundColor Yellow
+# Install on device (debug version)
+Write-Host "Installing debug version on device..." -ForegroundColor Yellow
 $installResult = & $adbPath install -r $targetApk 2>&1
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Error: Installation failed" -ForegroundColor Red
@@ -65,15 +65,15 @@ Write-Host "Installation successful!" -ForegroundColor Green
 Write-Host "Clearing logcat..." -ForegroundColor Yellow
 & $adbPath logcat -c
 
-# Optional: Start the app
+# Start the debug app (note the .debug suffix)
 Write-Host "Starting the main activity..." -ForegroundColor Yellow
-& $adbPath shell am start -n com.kidsim.tvkiosk/.MainActivity
+& $adbPath shell am start -n com.kidsim.tvkiosk.debug/com.kidsim.tvkiosk.MainActivity
 
 Write-Host "=== Debug Install Complete ===" -ForegroundColor Green
 Write-Host "App installed and started successfully!" -ForegroundColor Green
 Write-Host ""
 Write-Host "Useful commands:" -ForegroundColor Cyan
 Write-Host "  View logs: .\platform-tools\adb.exe logcat | findstr 'tvkiosk'" -ForegroundColor Gray
-Write-Host "  Start main app: .\platform-tools\adb.exe shell am start -n com.kidsim.tvkiosk/.MainActivity" -ForegroundColor Gray
-Write-Host "  Start update app: .\platform-tools\adb.exe shell am start -n com.kidsim.tvkiosk/.UpdateActivity" -ForegroundColor Gray
-Write-Host "  Uninstall: .\platform-tools\adb.exe uninstall com.kidsim.tvkiosk" -ForegroundColor Gray
+Write-Host "  Start main app: .\platform-tools\adb.exe shell am start -n com.kidsim.tvkiosk.debug/com.kidsim.tvkiosk.MainActivity" -ForegroundColor Gray
+Write-Host "  Start update app: .\platform-tools\adb.exe shell am start -n com.kidsim.tvkiosk.debug/com.kidsim.tvkiosk.UpdateActivity" -ForegroundColor Gray
+Write-Host "  Uninstall: .\platform-tools\adb.exe uninstall com.kidsim.tvkiosk.debug" -ForegroundColor Gray

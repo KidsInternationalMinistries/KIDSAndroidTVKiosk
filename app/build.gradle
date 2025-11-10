@@ -10,7 +10,7 @@ android {
         applicationId "com.kidsim.tvkiosk"
         minSdk 30  // Android 11 (API level 30)
         targetSdk 34
-        versionCode 13
+        versionCode 14
         versionName "1.7-Debug"
     }
 
@@ -31,16 +31,6 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
-    }
-}
-
-// Set different versions for debug builds
-android.applicationVariants.all { variant ->
-    if (variant.buildType.name == "debug") {
-        variant.outputs.each { output ->
-            output.versionCodeOverride = 1
-            output.versionNameOverride = "0.9-debug"
-        }
     }
 }
 
