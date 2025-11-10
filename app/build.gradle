@@ -10,7 +10,7 @@ android {
         applicationId "com.kidsim.tvkiosk"
         minSdk 30  // Android 11 (API level 30)
         targetSdk 34
-        versionCode 1100  // Sequential build number (major * 100 + minor * 10 + patch)
+        versionCode 101  // Sequential build number starting from 100
         versionName "1.8"  // Major.Minor version
     }
 
