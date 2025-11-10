@@ -107,33 +107,31 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-# Auto-increment version code for debug builds
-if ($BuildType -eq "debug") {
-    Write-Host "Auto-incrementing version code for debug build..." -ForegroundColor Cyan
+# Auto-increment version code for all builds (debug and release)
+Write-Host "Auto-incrementing version code for $BuildType build..." -ForegroundColor Cyan
+
+# Read current version from build.gradle
+$buildGradlePath = "app\build.gradle"
+if (-not (Test-Path $buildGradlePath)) {
+    Write-Host "Error: build.gradle not found" -ForegroundColor Red
+    exit 1
+}
+
+$buildGradleContent = Get-Content $buildGradlePath -Raw
+
+# Extract current version code
+if ($buildGradleContent -match 'versionCode\s+(\d+)') {
+    $currentVersionCode = [int]$matches[1]
+    $newVersionCode = $currentVersionCode + 1
     
-    # Read current version from build.gradle
-    $buildGradlePath = "app\build.gradle"
-    if (-not (Test-Path $buildGradlePath)) {
-        Write-Host "Error: build.gradle not found" -ForegroundColor Red
-        exit 1
-    }
+    # Update version code in build.gradle
+    $updatedContent = $buildGradleContent -replace 'versionCode\s+\d+', "versionCode $newVersionCode"
+    Set-Content -Path $buildGradlePath -Value $updatedContent -NoNewline
     
-    $buildGradleContent = Get-Content $buildGradlePath -Raw
-    
-    # Extract current version code
-    if ($buildGradleContent -match 'versionCode\s+(\d+)') {
-        $currentVersionCode = [int]$matches[1]
-        $newVersionCode = $currentVersionCode + 1
-        
-        # Update version code in build.gradle
-        $updatedContent = $buildGradleContent -replace 'versionCode\s+\d+', "versionCode $newVersionCode"
-        Set-Content -Path $buildGradlePath -Value $updatedContent -NoNewline
-        
-        Write-Host "Version code updated: $currentVersionCode -> $newVersionCode" -ForegroundColor Green
-    } else {
-        Write-Host "Error: Could not find versionCode in build.gradle" -ForegroundColor Red
-        exit 1
-    }
+    Write-Host "Version code updated: $currentVersionCode -> $newVersionCode" -ForegroundColor Green
+} else {
+    Write-Host "Error: Could not find versionCode in build.gradle" -ForegroundColor Red
+    exit 1
 }
 
 # Configure build-specific variables
