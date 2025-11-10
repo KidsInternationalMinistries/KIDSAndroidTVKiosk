@@ -1047,14 +1047,12 @@ public class UpdateActivity extends Activity {
             }
             
             if (installSuccess) {
-                statusText.setText("Installation started. App will close now. Please follow the installation prompts.");
+                statusText.setText("Installation started. Please follow the installation prompts on screen.");
                 Log.i(TAG, "APK installation initiated successfully");
                 
-                // Close the app after a brief delay
-                new android.os.Handler().postDelayed(() -> {
-                    finishAffinity();
-                    System.exit(0);
-                }, 2000);
+                // Don't close the app immediately - let the user see the status
+                // The installation will happen in the background
+                // App will be replaced when installation completes
             } else {
                 String errorMsg = "All installation methods failed. Please install manually from Downloads folder.";
                 Log.e(TAG, errorMsg);
