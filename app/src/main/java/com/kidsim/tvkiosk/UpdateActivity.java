@@ -543,145 +543,208 @@ public class UpdateActivity extends Activity {
             return null;
         }
     }
-    
-    private void startDownload(String apkUrl, String buildType) {
-        statusText.setText("Downloading " + buildType + " APK...");
-        
+
+    private void downloadAPKDirectly(String apkUrl, String buildType) {
         try {
-            DownloadManager downloadManager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
-            
-            if (downloadManager == null) {
-                throw new Exception("DownloadManager service not available");
-            }
-            
-            Uri downloadUri = Uri.parse(apkUrl);
-            DownloadManager.Request request = new DownloadManager.Request(downloadUri);
-            
-            // Use app's external files directory instead of public Downloads
-            // This doesn't require MANAGE_EXTERNAL_STORAGE permission on Android 11+
+            // Use app's external files directory
             File externalFilesDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
             if (externalFilesDir == null) {
-                throw new Exception("External files directory not available");
+                runOnUiThread(() -> {
+                    statusText.setText("Error: External files directory not available");
+                    saveAndInstallButton.setEnabled(true);
+                });
+                return;
             }
             
             File downloadFile = new File(externalFilesDir, "kiosk-update.apk");
             
             // Delete existing file if it exists
             if (downloadFile.exists()) {
-                downloadFile.delete();
+                boolean deleted = downloadFile.delete();
+                Log.i(TAG, "Existing APK file deleted: " + deleted);
             }
             
-            request.setTitle("Kiosk App Update");
-            request.setDescription("Downloading " + buildType + " version from GitHub");
-            request.setDestinationUri(Uri.fromFile(downloadFile));
-            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-            request.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI | DownloadManager.Request.NETWORK_MOBILE);
-            request.setAllowedOverRoaming(false);
+            runOnUiThread(() -> statusText.setText("Starting direct download..."));
             
-            Log.i(TAG, "Starting download from URL: " + apkUrl);
-            downloadId = downloadManager.enqueue(request);
-            Log.i(TAG, "Download started with ID: " + downloadId);
+            java.net.URL url = new java.net.URL(apkUrl);
+            java.net.HttpURLConnection connection = (java.net.HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setRequestProperty("Accept", "application/vnd.android.package-archive");
+            connection.setRequestProperty("User-Agent", "KIDSKioskApp/1.0");
+            connection.setConnectTimeout(30000);
+            connection.setReadTimeout(30000);
             
-            // Start a timer to check download status periodically
-            checkDownloadStatusPeriodically(downloadManager, downloadId);
+            Log.i(TAG, "Starting direct download from URL: " + apkUrl);
+            Log.i(TAG, "Download destination: " + downloadFile.getAbsolutePath());
+            
+            int responseCode = connection.getResponseCode();
+            if (responseCode != java.net.HttpURLConnection.HTTP_OK) {
+                throw new Exception("HTTP error: " + responseCode);
+            }
+            
+            long contentLength = connection.getContentLengthLong();
+            Log.i(TAG, "Expected download size: " + contentLength + " bytes");
+            
+            try (java.io.InputStream inputStream = connection.getInputStream();
+                 java.io.FileOutputStream outputStream = new java.io.FileOutputStream(downloadFile);
+                 java.io.BufferedInputStream bufferedInput = new java.io.BufferedInputStream(inputStream);
+                 java.io.BufferedOutputStream bufferedOutput = new java.io.BufferedOutputStream(outputStream)) {
+                
+                byte[] buffer = new byte[8192];
+                long totalBytesRead = 0;
+                int bytesRead;
+                long lastUpdate = 0;
+                
+                while ((bytesRead = bufferedInput.read(buffer)) != -1) {
+                    bufferedOutput.write(buffer, 0, bytesRead);
+                    totalBytesRead += bytesRead;
+                    
+                    // Update UI every 500ms
+                    long currentTime = System.currentTimeMillis();
+                    if (currentTime - lastUpdate > 500) {
+                        final long finalTotalBytes = totalBytesRead;
+                        final long finalContentLength = contentLength;
+                        runOnUiThread(() -> {
+                            if (finalContentLength > 0) {
+                                int progress = (int) ((finalTotalBytes * 100) / finalContentLength);
+                                statusText.setText("Downloading... " + progress + "% (" + (finalTotalBytes / 1024) + " KB)");
+                            } else {
+                                statusText.setText("Downloading... " + (finalTotalBytes / 1024) + " KB");
+                            }
+                        });
+                        lastUpdate = currentTime;
+                    }
+                }
+                
+                // Ensure all data is written to disk
+                bufferedOutput.flush();
+                outputStream.getFD().sync();
+            }
+            
+            connection.disconnect();
+            
+            long finalFileSize = downloadFile.length();
+            Log.i(TAG, "Download completed. Final file size: " + finalFileSize + " bytes");
+            
+            if (contentLength > 0 && finalFileSize != contentLength) {
+                Log.w(TAG, "File size mismatch: expected " + contentLength + ", got " + finalFileSize);
+            }
+            
+            runOnUiThread(() -> {
+                statusText.setText("Download completed! Verifying file...");
+                verifyWithRetry(3);
+            });
             
         } catch (Exception e) {
-            Log.e(TAG, "Error starting download", e);
-            statusText.setText("Error starting download: " + e.getMessage());
-            saveAndInstallButton.setEnabled(true);
-            Toast.makeText(this, "Download failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Log.e(TAG, "Direct download failed", e);
+            runOnUiThread(() -> {
+                statusText.setText("Download failed: " + e.getMessage());
+                saveAndInstallButton.setEnabled(true);
+            });
         }
     }
-    
-    private void checkDownloadStatusPeriodically(DownloadManager downloadManager, long downloadId) {
-        android.os.Handler handler = new android.os.Handler();
-        Runnable statusChecker = new Runnable() {
-            @Override
-            public void run() {
-                DownloadManager.Query query = new DownloadManager.Query();
-                query.setFilterById(downloadId);
-                
-                android.database.Cursor cursor = downloadManager.query(query);
-                if (cursor != null && cursor.moveToFirst()) {
-                    int statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
-                    int reasonIndex = cursor.getColumnIndex(DownloadManager.COLUMN_REASON);
-                    int bytesDownloadedIndex = cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR);
-                    int totalSizeIndex = cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES);
-                    
-                    if (statusIndex >= 0) {
-                        int status = cursor.getInt(statusIndex);
-                        long bytesDownloaded = bytesDownloadedIndex >= 0 ? cursor.getLong(bytesDownloadedIndex) : 0;
-                        long totalSize = totalSizeIndex >= 0 ? cursor.getLong(totalSizeIndex) : 0;
-                        
-                        Log.i(TAG, "Download status check - Status: " + status + ", Downloaded: " + bytesDownloaded + "/" + totalSize + " bytes");
-                        
-                        switch (status) {
-                            case DownloadManager.STATUS_PENDING:
-                                statusText.setText("Download pending...");
-                                handler.postDelayed(this, 2000); // Check again in 2 seconds
-                                break;
-                            case DownloadManager.STATUS_RUNNING:
-                                statusText.setText("Download in progress... " + (bytesDownloaded / 1024) + " KB");
-                                handler.postDelayed(this, 2000); // Check again in 2 seconds
-                                break;
-                            case DownloadManager.STATUS_SUCCESSFUL:
-                                Log.i(TAG, "Download completed successfully - triggering installation");
-                                statusText.setText("Download completed! Starting installation...");
-                                // Give a brief moment for UI to update, then start installation
-                                handler.postDelayed(() -> installAPK(), 500);
-                                break;
-                            case DownloadManager.STATUS_FAILED:
-                                int reason = reasonIndex >= 0 ? cursor.getInt(reasonIndex) : -1;
-                                String reasonStr = getDownloadFailureReason(reason);
-                                Log.e(TAG, "Download failed: " + reasonStr);
-                                statusText.setText("Download failed: " + reasonStr);
-                                saveAndInstallButton.setEnabled(true);
-                                break;
-                            case DownloadManager.STATUS_PAUSED:
-                                statusText.setText("Download paused...");
-                                handler.postDelayed(this, 2000); // Check again in 2 seconds
-                                break;
-                            default:
-                                Log.w(TAG, "Unknown download status: " + status);
-                                statusText.setText("Download status: " + status);
-                                handler.postDelayed(this, 2000); // Check again in 2 seconds
-                                break;
-                        }
-                    }
-                    cursor.close();
-                } else {
-                    Log.e(TAG, "Could not query download status - download may have been removed");
-                    statusText.setText("Error: Could not check download status");
-                    saveAndInstallButton.setEnabled(true);
-                }
-            }
-        };
+
+    private void startDownload(String apkUrl, String buildType) {
+        statusText.setText("Downloading " + buildType + " APK...");
         
-        // Start checking after 2 seconds
-        handler.postDelayed(statusChecker, 2000);
+        // Use direct download instead of DownloadManager for more reliable file writing
+        new Thread(() -> {
+            downloadAPKDirectly(apkUrl, buildType);
+        }).start();
     }
 
-    private String getDownloadFailureReason(int reasonCode) {
-        switch (reasonCode) {
-            case DownloadManager.ERROR_CANNOT_RESUME:
-                return "Cannot resume download";
-            case DownloadManager.ERROR_DEVICE_NOT_FOUND:
-                return "Storage device not found";
-            case DownloadManager.ERROR_FILE_ALREADY_EXISTS:
-                return "File already exists";
-            case DownloadManager.ERROR_FILE_ERROR:
-                return "Storage error";
-            case DownloadManager.ERROR_HTTP_DATA_ERROR:
-                return "HTTP data error";
-            case DownloadManager.ERROR_INSUFFICIENT_SPACE:
-                return "Insufficient storage space";
-            case DownloadManager.ERROR_TOO_MANY_REDIRECTS:
-                return "Too many redirects";
-            case DownloadManager.ERROR_UNHANDLED_HTTP_CODE:
-                return "Unhandled HTTP error";
-            case DownloadManager.ERROR_UNKNOWN:
-            default:
-                return "Unknown error (code: " + reasonCode + ")";
+    private void verifyWithRetry(int attemptsLeft) {
+        if (attemptsLeft <= 0) {
+            Log.e(TAG, "All verification attempts failed - file may be corrupted");
+            statusText.setText("Download verification failed after multiple attempts.");
+            saveAndInstallButton.setEnabled(true);
+            return;
+        }
+        
+        Log.i(TAG, "Attempting file verification (attempts left: " + attemptsLeft + ")");
+        
+        if (verifyDownloadedAPK()) {
+            statusText.setText("File verified! Starting installation...");
+            new android.os.Handler().postDelayed(() -> installAPK(), 500);
+        } else {
+            Log.w(TAG, "Verification attempt failed, retrying in 500ms");
+            statusText.setText("Verifying download... (attempt " + (4 - attemptsLeft) + " of 3)");
+            new android.os.Handler().postDelayed(() -> verifyWithRetry(attemptsLeft - 1), 500);
+        }
+    }
+
+    private boolean verifyDownloadedAPK() {
+        try {
+            File externalFilesDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+            if (externalFilesDir == null) {
+                Log.e(TAG, "External files directory not available for verification");
+                return false;
+            }
+            
+            File downloadFile = new File(externalFilesDir, "kiosk-update.apk");
+            
+            if (!downloadFile.exists()) {
+                Log.e(TAG, "Downloaded APK file does not exist: " + downloadFile.getAbsolutePath());
+                
+                // List all files in the directory to debug
+                File[] files = externalFilesDir.listFiles();
+                if (files != null) {
+                    Log.i(TAG, "Files in downloads directory:");
+                    for (File file : files) {
+                        Log.i(TAG, "  - " + file.getName() + " (" + file.length() + " bytes)");
+                    }
+                } else {
+                    Log.e(TAG, "Downloads directory is null or empty");
+                }
+                return false;
+            }
+            
+            long fileSize = downloadFile.length();
+            Log.i(TAG, "Downloaded APK file size: " + fileSize + " bytes");
+            
+            // Also check if file is readable
+            if (!downloadFile.canRead()) {
+                Log.e(TAG, "Downloaded APK file cannot be read");
+                return false;
+            }
+            
+            // Check if file size is reasonable (APK should be at least 1MB and match expected size)
+            if (fileSize < 1024 * 1024) {
+                Log.e(TAG, "Downloaded APK file too small: " + fileSize + " bytes");
+                return false;
+            }
+            
+            // Check if file size is reasonable but not too large (should be under 20MB)
+            if (fileSize > 20 * 1024 * 1024) {
+                Log.e(TAG, "Downloaded APK file too large: " + fileSize + " bytes (may be corrupted)");
+                return false;
+            }
+            
+            Log.i(TAG, "APK file size validation passed: " + fileSize + " bytes");
+            
+            // Verify it's a valid ZIP file by checking the header
+            try (FileInputStream fis = new FileInputStream(downloadFile)) {
+                byte[] header = new byte[4];
+                int bytesRead = fis.read(header);
+                if (bytesRead < 4) {
+                    Log.e(TAG, "Cannot read APK file header");
+                    return false;
+                }
+                
+                // Check for ZIP signature (PK\003\004 or PK\005\006)
+                if (!(header[0] == 'P' && header[1] == 'K' && 
+                      (header[2] == 0x03 || header[2] == 0x05))) {
+                    Log.e(TAG, "APK file header invalid - not a ZIP file");
+                    return false;
+                }
+                
+                Log.i(TAG, "APK file verification passed - valid ZIP header and reasonable size");
+                return true;
+            }
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error verifying downloaded APK", e);
+            return false;
         }
     }
 

@@ -13,7 +13,7 @@ if ($deviceStatus -match "device$") {
 }
 
 # Check if debug APK exists on device
-$apkExists = .\platform-tools\adb shell "test -f /storage/emulated/0/Download/kiosk-debug-test.apk && echo 'exists'"
+$apkExists = .\platform-tools\adb shell "if [ -f /storage/emulated/0/Download/kiosk-debug-test.apk ]; then echo 'exists'; fi"
 
 if ($apkExists -match "exists") {
     Write-Host "✅ Debug APK found on device" -ForegroundColor Green
