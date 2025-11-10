@@ -44,17 +44,17 @@ import org.json.JSONObject;
 public class UpdateActivity extends Activity {
     private static final String TAG = "UpdateActivity";
     
-    // GitHub API URLs to get release information
-    private static final String GITHUB_RELEASES_API_URL = 
-        "https://api.github.com/repos/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases";
-    private static final String GITHUB_LATEST_RELEASE_API_URL = 
-        "https://api.github.com/repos/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/latest";
+    // GitHub API URLs to get release information by tag (avoids pagination issues)
+    private static final String GITHUB_TAG_RELEASE_BASE_URL = 
+        "https://api.github.com/repos/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/tags/";
+    private static final String GITHUB_DEBUG_TAG_URL = GITHUB_TAG_RELEASE_BASE_URL + "debug";
+    private static final String GITHUB_LATEST_TAG_URL = GITHUB_TAG_RELEASE_BASE_URL + "v1.7"; // Will be updated dynamically
     
     // Fallback URLs in case API fails
     private static final String FALLBACK_RELEASE_APK_URL = 
-        "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/download/v1.0-test/app-test.apk";
+        "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/download/v1.7/app-release.apk";
     private static final String FALLBACK_DEBUG_APK_URL = 
-        "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/download/v1.0-test/app-test.apk";
+        "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/download/debug/app-debug.apk";
     
     private SharedPreferences preferences;
     private DeviceIdManager deviceIdManager;
@@ -384,8 +384,9 @@ public class UpdateActivity extends Activity {
     
     private String getReleaseDownloadUrl(String buildType) {
         try {
-            String apiUrl = buildType.equals("Release") ? GITHUB_LATEST_RELEASE_API_URL : GITHUB_RELEASES_API_URL;
-            Log.i(TAG, "Fetching " + buildType + " release from GitHub API: " + apiUrl);
+            // Use tag-based API to avoid pagination issues
+            String apiUrl = buildType.equals("Release") ? GITHUB_LATEST_TAG_URL : GITHUB_DEBUG_TAG_URL;
+            Log.i(TAG, "Fetching " + buildType + " release by tag from GitHub API: " + apiUrl);
             
             URL url = new URL(apiUrl);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -407,14 +408,8 @@ public class UpdateActivity extends Activity {
                 }
                 reader.close();
                 
-                if (buildType.equals("Release")) {
-                    // For Release builds, use latest release API (returns single release object)
-                    return parseReleaseForApk(new JSONObject(response.toString()), buildType);
-                } else {
-                    // For Debug builds, use releases API (returns array) and find latest debug/pre-release
-                    JSONArray releases = new JSONArray(response.toString());
-                    return findDebugReleaseApk(releases);
-                }
+                // Parse the single release object (not an array)
+                return parseReleaseForApk(new JSONObject(response.toString()), buildType);
                 
             } else {
                 Log.e(TAG, "GitHub API request failed with code: " + responseCode);
@@ -422,7 +417,7 @@ public class UpdateActivity extends Activity {
             }
             
         } catch (Exception e) {
-            Log.e(TAG, "Error fetching " + buildType + " release", e);
+            Log.e(TAG, "Error fetching " + buildType + " release by tag", e);
             return null;
         }
     }
