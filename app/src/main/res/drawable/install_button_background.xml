@@ -8,6 +8,24 @@
         </shape>
     </item>
     
+    <!-- Focused state (when selected via remote/keyboard) -->
+    <item android:state_focused="true" android:state_enabled="true">
+        <shape android:shape="rectangle">
+            <solid android:color="#2196F3"/>
+            <stroke android:width="3dp" android:color="#FFFFFF"/>
+            <corners android:radius="4dp"/>
+        </shape>
+    </item>
+    
+    <!-- Selected state -->
+    <item android:state_selected="true" android:state_enabled="true">
+        <shape android:shape="rectangle">
+            <solid android:color="#2196F3"/>
+            <stroke android:width="2dp" android:color="#FFFFFF"/>
+            <corners android:radius="4dp"/>
+        </shape>
+    </item>
+    
     <!-- Pressed state -->
     <item android:state_pressed="true" android:state_enabled="true">
         <shape android:shape="rectangle">

@@ -53,7 +53,10 @@
             android:layout_weight="2"
             android:padding="8dp"
             android:textColor="#000000"
-            android:textSize="14sp" />
+            android:textSize="14sp"
+            android:background="@drawable/spinner_background"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
 
     </LinearLayout>
 
@@ -82,7 +85,10 @@
             android:layout_weight="2"
             android:padding="8dp"
             android:textColor="#000000"
-            android:textSize="14sp" />
+            android:textSize="14sp"
+            android:background="@drawable/spinner_background"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
 
     </LinearLayout>
 
@@ -111,7 +117,10 @@
             android:layout_weight="2"
             android:padding="8dp"
             android:textColor="#000000"
-            android:textSize="14sp" />
+            android:textSize="14sp"
+            android:background="@drawable/spinner_background"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
 
     </LinearLayout>
 
@@ -144,7 +153,9 @@
             android:textStyle="bold"
             android:textColor="#ffffff"
             android:background="@drawable/install_button_background"
-            android:layout_marginEnd="10dp" />
+            android:layout_marginEnd="10dp"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
 
         <Button
             android:id="@+id/saveAndInstallButton"
@@ -157,7 +168,9 @@
             android:textColor="#ffffff"
             android:background="@drawable/install_button_background"
             android:layout_marginStart="5dp"
-            android:layout_marginEnd="5dp" />
+            android:layout_marginEnd="5dp"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
 
         <Button
             android:id="@+id/exitButton"
@@ -169,7 +182,9 @@
             android:textStyle="bold"
             android:textColor="#ffffff"
             android:background="@drawable/install_button_background"
-            android:layout_marginStart="10dp" />
+            android:layout_marginStart="10dp"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
 
     </LinearLayout>
 
