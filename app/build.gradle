@@ -10,8 +10,8 @@ android {
         applicationId "com.kidsim.tvkiosk"
         minSdk 30  // Android 11 (API level 30)
         targetSdk 34
-        versionCode 27
-        versionName "1.7.1-Debug"
+        versionCode 28
+        versionName "1.7.1"
     }
 
     buildTypes {
