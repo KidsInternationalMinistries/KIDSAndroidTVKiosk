@@ -119,20 +119,38 @@ if (-not (Test-Path $buildGradlePath)) {
 
 $buildGradleContent = Get-Content $buildGradlePath -Raw
 
-# Extract current version code
+# Extract current version code and version name
 if ($buildGradleContent -match 'versionCode\s+(\d+)') {
     $currentVersionCode = [int]$matches[1]
     $newVersionCode = $currentVersionCode + 1
-    
-    # Update version code in build.gradle
-    $updatedContent = $buildGradleContent -replace 'versionCode\s+\d+', "versionCode $newVersionCode"
-    Set-Content -Path $buildGradlePath -Value $updatedContent -NoNewline
-    
-    Write-Host "Version code updated: $currentVersionCode -> $newVersionCode" -ForegroundColor Green
 } else {
     Write-Host "Error: Could not find versionCode in build.gradle" -ForegroundColor Red
     exit 1
 }
+
+if ($buildGradleContent -match 'versionName\s+"([^"]+)"') {
+    $baseVersionName = $matches[1]
+    # Remove any existing -Debug suffix to get clean base version
+    $baseVersionName = $baseVersionName -replace '-Debug$', ''
+} else {
+    Write-Host "Error: Could not find versionName in build.gradle" -ForegroundColor Red
+    exit 1
+}
+
+# Set version name based on build type
+if ($BuildType -eq "debug") {
+    $newVersionName = "$baseVersionName-Debug"
+} else {
+    $newVersionName = $baseVersionName
+}
+
+# Update version code and version name in build.gradle
+$updatedContent = $buildGradleContent -replace 'versionCode\s+\d+', "versionCode $newVersionCode"
+$updatedContent = $updatedContent -replace 'versionName\s+"[^"]+"', "versionName `"$newVersionName`""
+Set-Content -Path $buildGradlePath -Value $updatedContent -NoNewline
+
+Write-Host "Version code updated: $currentVersionCode -> $newVersionCode" -ForegroundColor Green
+Write-Host "Version name updated: $baseVersionName -> $newVersionName" -ForegroundColor Green
 
 # Configure build-specific variables
 if ($BuildType -eq "debug") {
