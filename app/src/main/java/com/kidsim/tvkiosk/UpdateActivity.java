@@ -69,6 +69,8 @@ public class UpdateActivity extends Activity {
     private TextView statusText;
     private TextView currentVersionText;
     private Button saveAndInstallButton;
+    private Button kioskButton;
+    private Button exitButton;
     
     private List<String> availableDeviceIds;
     private boolean isFirstTimeSetup = false;
@@ -114,8 +116,10 @@ public class UpdateActivity extends Activity {
         statusText = findViewById(R.id.statusText);
         currentVersionText = findViewById(R.id.currentVersionText);
         saveAndInstallButton = findViewById(R.id.saveAndInstallButton);
+        kioskButton = findViewById(R.id.kioskButton);
+        exitButton = findViewById(R.id.exitButton);
         
-        // Start with button disabled until all selections are made
+        // Start with update button disabled until all selections are made
         saveAndInstallButton.setEnabled(false);
         
         // Set button text based on app type
@@ -127,9 +131,9 @@ public class UpdateActivity extends Activity {
     
     private void updateButtonText() {
         if (isDebugApp()) {
-            saveAndInstallButton.setText("Download Debug Update");
+            saveAndInstallButton.setText("Update");
         } else {
-            saveAndInstallButton.setText("Download Release Update");
+            saveAndInstallButton.setText("Update");
         }
     }
     
@@ -193,6 +197,8 @@ public class UpdateActivity extends Activity {
     
     private void setupEventHandlers() {
         saveAndInstallButton.setOnClickListener(v -> saveAndInstall());
+        kioskButton.setOnClickListener(v -> returnToKiosk());
+        exitButton.setOnClickListener(v -> exitApp());
     }
     
     private void loadDeviceIds() {
@@ -933,5 +939,91 @@ public class UpdateActivity extends Activity {
      */
     private boolean isDebugApp() {
         return getPackageName().endsWith(".debug");
+    }
+    
+    /**
+     * Return to kiosk by closing this activity and going back to MainActivity
+     */
+    private void returnToKiosk() {
+        Log.i(TAG, "Returning to kiosk mode");
+        
+        // Save any pending preferences first
+        saveCurrentSettings();
+        
+        try {
+            // Create intent to start MainActivity
+            Intent kioskIntent = new Intent(this, MainActivity.class);
+            
+            // Add flag to indicate we're returning from configuration
+            // This will tell MainActivity to skip device ID configuration check
+            kioskIntent.putExtra("returnFromConfiguration", true);
+            
+            // Clear the task and start MainActivity as a new task
+            kioskIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            
+            // Start MainActivity
+            startActivity(kioskIntent);
+            
+            // Finish this activity
+            finish();
+            
+            Log.i(TAG, "Successfully started MainActivity and finished UpdateActivity");
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error returning to kiosk", e);
+            // If there's an error, just finish this activity
+            finish();
+        }
+    }
+    
+    /**
+     * Exit the application completely
+     */
+    private void exitApp() {
+        Log.i(TAG, "Exiting application");
+        
+        // Save any pending preferences first
+        saveCurrentSettings();
+        
+        // Show confirmation dialog
+        new AlertDialog.Builder(this)
+            .setTitle("Exit Application")
+            .setMessage("Are you sure you want to exit the application?")
+            .setPositiveButton("Yes", (dialog, which) -> {
+                finishAffinity(); // Close all activities
+                System.exit(0);   // Terminate the app process
+            })
+            .setNegativeButton("No", null)
+            .show();
+    }
+    
+    /**
+     * Save current settings without performing update
+     */
+    private void saveCurrentSettings() {
+        try {
+            // Get selected values
+            String orientation = orientationSpinner.getSelectedItem() != null ? 
+                orientationSpinner.getSelectedItem().toString() : "Landscape";
+            String deviceId = deviceIdSpinner.getSelectedItem() != null ? 
+                deviceIdSpinner.getSelectedItem().toString() : "";
+            String buildType = isDebugApp() ? "Debug" : "Release";
+            
+            // Save preferences
+            SharedPreferences.Editor editor = preferences.edit();
+            editor.putString("buildType", buildType);
+            editor.putString("orientation", orientation);
+            editor.putString("deviceId", deviceId);
+            editor.apply();
+            
+            // Save device ID using DeviceIdManager if not blank
+            if (!deviceId.isEmpty()) {
+                deviceIdManager.setDeviceId(deviceId);
+            }
+            
+            Log.i(TAG, "Settings saved - Build: " + buildType + ", Orientation: " + orientation + ", Device: " + deviceId);
+        } catch (Exception e) {
+            Log.e(TAG, "Error saving settings", e);
+        }
     }
 }

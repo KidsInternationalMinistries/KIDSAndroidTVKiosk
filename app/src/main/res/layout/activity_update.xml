@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="40dp"
+    android:padding="20dp"
     android:background="#F5F5F5">
 
     <!-- Title -->
@@ -11,11 +11,11 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Kiosk Configuration"
-        android:textSize="28sp"
+        android:textSize="24sp"
         android:textStyle="bold"
         android:textColor="#333333"
         android:gravity="center"
-        android:layout_marginBottom="20dp" />
+        android:layout_marginBottom="15dp" />
 
     <!-- Current Version -->
     <TextView
@@ -23,67 +23,97 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Current Version: Loading..."
-        android:textSize="16sp"
+        android:textSize="14sp"
         android:textColor="#666666"
         android:gravity="center"
-        android:layout_marginBottom="30dp" />
+        android:layout_marginBottom="15dp" />
 
-    <!-- Build Type Section -->
-    <TextView
+    <!-- Build Type Section - Side by side -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Build Type"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:textColor="#333333"
-        android:layout_marginBottom="10dp" />
+        android:orientation="horizontal"
+        android:layout_marginBottom="15dp"
+        android:gravity="center_vertical">
 
-    <Spinner
-        android:id="@+id/buildTypeSpinner"
-        android:layout_width="match_parent"
-        android:layout_height="72dp"
-        android:layout_marginBottom="30dp"
-        android:padding="16dp"
-        android:textColor="#000000"
-        android:textSize="16sp" />
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Build Type:"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#333333"
+            android:paddingEnd="10dp" />
 
-    <!-- Orientation Section -->
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Orientation"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:textColor="#333333"
-        android:layout_marginBottom="10dp" />
+        <Spinner
+            android:id="@+id/buildTypeSpinner"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="2"
+            android:padding="8dp"
+            android:textColor="#000000"
+            android:textSize="14sp" />
 
-    <Spinner
-        android:id="@+id/orientationSpinner"
-        android:layout_width="match_parent"
-        android:layout_height="72dp"
-        android:layout_marginBottom="30dp"
-        android:padding="16dp"
-        android:textColor="#000000"
-        android:textSize="16sp" />
+    </LinearLayout>
 
-    <!-- Device ID Section -->
-    <TextView
+    <!-- Orientation Section - Side by side -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Device ID"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:textColor="#333333"
-        android:layout_marginBottom="10dp" />
+        android:orientation="horizontal"
+        android:layout_marginBottom="15dp"
+        android:gravity="center_vertical">
 
-    <Spinner
-        android:id="@+id/deviceIdSpinner"
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Orientation:"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#333333"
+            android:paddingEnd="10dp" />
+
+        <Spinner
+            android:id="@+id/orientationSpinner"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="2"
+            android:padding="8dp"
+            android:textColor="#000000"
+            android:textSize="14sp" />
+
+    </LinearLayout>
+
+    <!-- Device ID Section - Side by side -->
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="72dp"
-        android:layout_marginBottom="40dp"
-        android:padding="16dp"
-        android:textColor="#000000"
-        android:textSize="16sp" />
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="15dp"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Device ID:"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#333333"
+            android:paddingEnd="10dp" />
+
+        <Spinner
+            android:id="@+id/deviceIdSpinner"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="2"
+            android:padding="8dp"
+            android:textColor="#000000"
+            android:textSize="14sp" />
+
+    </LinearLayout>
 
     <!-- Status Text -->
     <TextView
@@ -91,21 +121,56 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Loading device IDs..."
-        android:textSize="16sp"
+        android:textSize="14sp"
         android:textColor="#666666"
         android:gravity="center"
-        android:layout_marginBottom="20dp" />
+        android:layout_marginBottom="15dp" />
 
-    <!-- Save and Install Button -->
-    <Button
-        android:id="@+id/saveAndInstallButton"
+    <!-- Buttons Row -->
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="60dp"
-        android:text="Download and Install Update"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:textColor="#ffffff"
-        android:background="@drawable/install_button_background"
-        android:layout_marginTop="20dp" />
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginTop="10dp">
+
+        <Button
+            android:id="@+id/kioskButton"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            android:text="Kiosk"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#ffffff"
+            android:background="@drawable/install_button_background"
+            android:layout_marginEnd="10dp" />
+
+        <Button
+            android:id="@+id/saveAndInstallButton"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            android:text="Update"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#ffffff"
+            android:background="@drawable/install_button_background"
+            android:layout_marginStart="5dp"
+            android:layout_marginEnd="5dp" />
+
+        <Button
+            android:id="@+id/exitButton"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            android:text="Exit"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#ffffff"
+            android:background="@drawable/install_button_background"
+            android:layout_marginStart="10dp" />
+
+    </LinearLayout>
 
 </LinearLayout>

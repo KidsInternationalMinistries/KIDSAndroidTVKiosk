@@ -17,6 +17,7 @@ import android.webkit.WebViewClient;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -40,11 +41,11 @@ import java.net.URL;
 public class MainActivity extends Activity implements ConfigurationManager.ConfigUpdateListener {
     
     private static final String TAG = "MainActivity";
-    private static final int MAX_PAGES = 3;
     
     // UI components
     private WebView[] webViews;
     private WebView[] backupWebViews;
+    private FrameLayout webViewContainer;
     private LinearLayout loadingLayout;
     private LinearLayout errorLayout;
     private TextView loadingProgress;
@@ -80,6 +81,10 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     private static final long CONFIG_UPDATE_INTERVAL = 3600000; // 1 hour
     private static final long RETRY_INTERVAL = 300000; // 5 minutes
     
+    // Double back press tracking for configuration access
+    private long lastBackPressTime = 0;
+    private static final long DOUBLE_BACK_PRESS_INTERVAL = 2000; // 2 seconds
+    
     // WebView pool management
     private boolean[] pageLoadStates;
     private boolean[] backupPageLoadStates;
@@ -108,9 +113,7 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         // Initialize background executor
         executor = Executors.newSingleThreadExecutor();
         
-        // Initialize WebView pool arrays
-        pageLoadStates = new boolean[3];
-        backupPageLoadStates = new boolean[3];
+        // WebView arrays will be initialized dynamically based on page count
         
         // Setup kiosk mode
         setupKioskMode();
@@ -127,9 +130,18 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         // Initialize device ID manager
         deviceIdManager = new DeviceIdManager(this);
         
-        // Check if device ID is configured, show setup if needed
-        // Configuration loading will happen after setup is complete
-        checkDeviceIdConfiguration();
+        // Check if we're returning from configuration screen
+        boolean returnFromConfiguration = getIntent().getBooleanExtra("returnFromConfiguration", false);
+        
+        if (returnFromConfiguration) {
+            Log.i(TAG, "Returning from configuration screen, loading app directly");
+            // Load configuration directly without checking device ID
+            loadConfiguration();
+        } else {
+            // Check if device ID is configured, show setup if needed
+            // Configuration loading will happen after setup is complete
+            checkDeviceIdConfiguration();
+        }
         
         // Setup periodic configuration updates
         setupConfigurationUpdates();
@@ -147,17 +159,8 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     }
     
     private void initializeViews() {
-        // Initialize WebView pools
-        webViews = new WebView[3];
-        backupWebViews = new WebView[3];
-        
-        webViews[0] = findViewById(R.id.webView0);
-        webViews[1] = findViewById(R.id.webView1);
-        webViews[2] = findViewById(R.id.webView2);
-        
-        backupWebViews[0] = findViewById(R.id.backupWebView0);
-        backupWebViews[1] = findViewById(R.id.backupWebView1);
-        backupWebViews[2] = findViewById(R.id.backupWebView2);
+        // Initialize WebView container
+        webViewContainer = findViewById(R.id.webViewContainer);
         
         // Initialize loading UI
         loadingLayout = findViewById(R.id.loadingLayout);
@@ -169,8 +172,9 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         retryButton = findViewById(R.id.retryButton);
         updateButton = findViewById(R.id.updateButton);
         
-        // Setup WebView pool
-        setupWebViewPool();
+        // WebViews will be created dynamically based on the number of pages
+        // This happens in setupDynamicWebViews() which is called after configuration is loaded
+        
         setupErrorHandling();
         setupUpdateButton();
     }
@@ -250,6 +254,11 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     }
     
     private void setupRefreshMonitoring() {
+        // Stop any existing refresh monitoring first
+        if (refreshHandler != null) {
+            refreshHandler.removeCallbacks(this::checkForRefresh);
+        }
+        
         // Start background refresh system
         refreshHandler.postDelayed(this::checkForRefresh, REFRESH_INTERVAL);
     }
@@ -268,11 +277,12 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     
     private void markPageLoaded(WebView webView) {
         // Find which WebView this is and mark as loaded
-        for (int i = 0; i < 3; i++) {
+        int webViewCount = webViews != null ? webViews.length : 0;
+        for (int i = 0; i < webViewCount; i++) {
             if (webViews[i] == webView) {
                 pageLoadStates[i] = true;
                 pagesLoaded++;
-                Log.d(TAG, "Main WebView " + i + " loaded. Total loaded: " + pagesLoaded);
+                Log.d(TAG, "Main WebView " + i + " loaded. Total loaded: " + pagesLoaded + "/" + webViewCount);
                 
                 // Update loading progress
                 updateLoadingProgress();
@@ -284,16 +294,20 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
             }
         }
         
-        // Check if initial load is complete
-        if (!initialLoadComplete && pagesLoaded >= 1) {
+        // Check if ALL pages are loaded (not just 1)
+        if (!initialLoadComplete && pagesLoaded >= webViewCount) {
             initialLoadComplete = true;
+            Log.i(TAG, "All " + webViewCount + " pages loaded! Starting page rotation.");
             showFirstPage();
+            // Start page rotation timer now that all pages are loaded
+            startPageRotationTimer();
         }
     }
     
     private void markPageFailed(WebView webView) {
         // Find which WebView this is and mark as failed
-        for (int i = 0; i < 3; i++) {
+        int webViewCount = webViews != null ? webViews.length : 0;
+        for (int i = 0; i < webViewCount; i++) {
             if (webViews[i] == webView) {
                 pageLoadStates[i] = false;
                 Log.w(TAG, "Main WebView " + i + " failed to load");
@@ -308,7 +322,8 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     
     private void showFirstPage() {
         // Show the first successfully loaded page
-        for (int i = 0; i < 3; i++) {
+        int webViewCount = webViews != null ? webViews.length : 0;
+        for (int i = 0; i < webViewCount; i++) {
             if (pageLoadStates[i]) {
                 currentPageIndex = i;
                 showPage(i);
@@ -324,17 +339,30 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     }
     
     private void showPage(int pageIndex) {
+        // Safety check
+        if (webViews == null || backupWebViews == null) {
+            Log.w(TAG, "WebViews not initialized yet, cannot show page " + pageIndex);
+            return;
+        }
+        
         // Hide all pages first
-        for (int i = 0; i < 3; i++) {
-            webViews[i].setVisibility(View.GONE);
-            backupWebViews[i].setVisibility(View.GONE);
+        int webViewCount = webViews.length;
+        for (int i = 0; i < webViewCount; i++) {
+            if (webViews[i] != null) {
+                webViews[i].setVisibility(View.GONE);
+            }
+            if (backupWebViews[i] != null) {
+                backupWebViews[i].setVisibility(View.GONE);
+            }
         }
         
         // Show the requested page
-        if (pageIndex >= 0 && pageIndex < 3) {
+        if (pageIndex >= 0 && pageIndex < webViewCount && webViews[pageIndex] != null) {
             webViews[pageIndex].setVisibility(View.VISIBLE);
             currentPageIndex = pageIndex;
             Log.d(TAG, "Showing page: " + pageIndex);
+        } else {
+            Log.w(TAG, "Invalid page index or WebView not ready: " + pageIndex);
         }
     }
     
@@ -350,7 +378,8 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
             startBackgroundRefresh();
         }
         
-        // Schedule next check
+        // Schedule next check (only one at a time)
+        refreshHandler.removeCallbacks(this::checkForRefresh);
         refreshHandler.postDelayed(this::checkForRefresh, REFRESH_INTERVAL);
     }
     
@@ -396,11 +425,20 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     }
     
     private void swapToRefreshedPages() {
+        // Safety check
+        if (webViews == null || backupWebViews == null || backupPageLoadStates == null) {
+            Log.w(TAG, "WebViews not initialized, cannot swap pages");
+            return;
+        }
+        
         // Only swap pages that loaded successfully in backup WebViews
-        for (int i = 0; i < 3; i++) {
+        int webViewCount = webViews.length;
+        for (int i = 0; i < webViewCount; i++) {
             if (backupPageLoadStates[i]) {
                 // Hide current main WebView
-                webViews[i].setVisibility(View.GONE);
+                if (webViews[i] != null) {
+                    webViews[i].setVisibility(View.GONE);
+                }
                 
                 // Swap the WebView references
                 WebView temp = webViews[i];
@@ -426,7 +464,10 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         pagesLoaded = 0;
         initialLoadComplete = false;
         
-        for (int i = 0; i < 3; i++) {
+        int webViewCount = webViews != null ? webViews.length : 0;
+        
+        // Reset all page load states
+        for (int i = 0; i < webViewCount; i++) {
             pageLoadStates[i] = false;
             backupPageLoadStates[i] = false;
         }
@@ -434,8 +475,8 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         // Show loading state
         showLoadingState();
         
-        // Load up to 3 pages into the WebView pool
-        int pagesToLoad = Math.min(pages.size(), 3);
+        // Load all pages into the WebView pool (no longer limited to 3)
+        int pagesToLoad = Math.min(pages.size(), webViewCount);
         for (int i = 0; i < pagesToLoad; i++) {
             loadPageIntoWebView(i);
         }
@@ -478,16 +519,21 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     }
     
     private void setupPageRotationTimer() {
+        // First stop any existing timer to prevent multiple concurrent timers
+        if (pageHandler != null && pageRotationRunnable != null) {
+            pageHandler.removeCallbacks(pageRotationRunnable);
+        }
+        
         // Use the first page's display time for timing
         PageConfig currentPage = pages.get(currentPageIndex);
         long displayTime = currentPage.getDisplayTimeSeconds() * 1000L;
         
         pageRotationRunnable = () -> {
             // Move to next page
-            int nextPageIndex = (currentPageIndex + 1) % Math.min(pages.size(), 3);
+            int nextPageIndex = (currentPageIndex + 1) % pages.size();
             
             // Switch to next page if it's loaded
-            if (pageLoadStates[nextPageIndex]) {
+            if (pageLoadStates != null && nextPageIndex < pageLoadStates.length && pageLoadStates[nextPageIndex]) {
                 showPage(nextPageIndex);
                 currentPageIndex = nextPageIndex;
                 
@@ -609,17 +655,6 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         // Apply orientation
         applyOrientation(config.getOrientation());
         
-        // Check network connectivity and update cache modes
-        isNetworkConnected();
-        for (int i = 0; i < 3; i++) {
-            if (webViews[i] != null) {
-                updateWebViewCacheMode(webViews[i].getSettings());
-            }
-            if (backupWebViews[i] != null) {
-                updateWebViewCacheMode(backupWebViews[i].getSettings());
-            }
-        }
-        
         // Setup pages
         pages = config.getPages();
         if (pages == null || pages.isEmpty()) {
@@ -628,14 +663,124 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
             return;
         }
         
+        // Setup dynamic WebViews based on page count
+        int pageCount = pages.size();
+        Log.i(TAG, "Setting up " + pageCount + " pages");
+        setupDynamicWebViews(pageCount);
+        
+        // Check network connectivity and update cache modes for all WebViews
+        isNetworkConnected();
+        for (int i = 0; i < pageCount; i++) {
+            if (webViews[i] != null) {
+                updateWebViewCacheMode(webViews[i].getSettings());
+            }
+            if (backupWebViews[i] != null) {
+                updateWebViewCacheMode(backupWebViews[i].getSettings());
+            }
+        }
+        
         // Load pages into WebView pool
         loadPagesIntoPool();
         
-        // Start page rotation timer
-        startPageRotationTimer();
-        
         Log.i(TAG, "Configuration applied with " + pages.size() + " pages, network: " + 
               (isNetworkAvailable ? "CONNECTED" : "OFFLINE"));
+    }
+    
+    /**
+     * Setup dynamic WebViews based on the number of pages
+     */
+    private void setupDynamicWebViews(int pageCount) {
+        Log.i(TAG, "Setting up " + pageCount + " dynamic WebViews");
+        
+        // Safety check - make sure webViewContainer is initialized
+        if (webViewContainer == null) {
+            Log.e(TAG, "webViewContainer is null! Views not properly initialized.");
+            return;
+        }
+        
+        // Clear existing WebViews
+        webViewContainer.removeAllViews();
+        
+        // Get device dimensions for rotation calculations
+        android.util.DisplayMetrics displayMetrics = new android.util.DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+        int deviceWidth = displayMetrics.widthPixels;
+        int deviceHeight = displayMetrics.heightPixels;
+        
+        Log.d(TAG, "Device dimensions: " + deviceWidth + "x" + deviceHeight);
+        
+        // Initialize arrays with dynamic size
+        webViews = new WebView[pageCount];
+        backupWebViews = new WebView[pageCount];
+        pageLoadStates = new boolean[pageCount];
+        backupPageLoadStates = new boolean[pageCount];
+        
+        // Create WebViews dynamically
+        for (int i = 0; i < pageCount; i++) {
+            try {
+                // Create main WebView
+                webViews[i] = new WebView(this);
+                webViews[i].setId(View.generateViewId());
+                
+                // Apply 90-degree rotation and swap width/height
+                applyWebViewRotation(webViews[i], deviceWidth, deviceHeight);
+                
+                webViews[i].setBackgroundColor(0xFF000000); // Black background
+                webViews[i].setVisibility(View.GONE);
+                webViewContainer.addView(webViews[i]);
+                
+                // Create backup WebView
+                backupWebViews[i] = new WebView(this);
+                backupWebViews[i].setId(View.generateViewId());
+                
+                // Apply 90-degree rotation and swap width/height
+                applyWebViewRotation(backupWebViews[i], deviceWidth, deviceHeight);
+                
+                backupWebViews[i].setBackgroundColor(0xFF000000); // Black background
+                backupWebViews[i].setVisibility(View.GONE);
+                webViewContainer.addView(backupWebViews[i]);
+                
+                // Setup WebView instances
+                setupWebViewInstance(webViews[i], "Main-" + i);
+                setupWebViewInstance(backupWebViews[i], "Backup-" + i);
+                
+                Log.d(TAG, "Created rotated WebView pair " + i);
+                
+            } catch (Exception e) {
+                Log.e(TAG, "Error creating WebView " + i, e);
+                return;
+            }
+        }
+        
+        // Reset counters
+        pagesLoaded = 0;
+        initialLoadComplete = false;
+        
+        Log.i(TAG, "Dynamic WebView setup complete for " + pageCount + " pages with rotation");
+    }
+    
+    private void applyWebViewRotation(WebView webView, int deviceWidth, int deviceHeight) {
+        // Rotate the WebView by 90 degrees
+        webView.setRotation(90f);
+        
+        // Swap width and height for the rotated view
+        // Since we're rotating 90 degrees, the view's width becomes the device height
+        // and the view's height becomes the device width
+        FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(
+            deviceHeight, // Width becomes device height
+            deviceWidth   // Height becomes device width
+        );
+        
+        // Center the rotated view within the container
+        layoutParams.gravity = android.view.Gravity.CENTER;
+        
+        webView.setLayoutParams(layoutParams);
+        
+        // Set the pivot point for rotation to the center of the view
+        webView.setPivotX(deviceHeight / 2f);
+        webView.setPivotY(deviceWidth / 2f);
+        
+        Log.d(TAG, "Applied 90° rotation to WebView: " + deviceWidth + "x" + deviceHeight + " -> " + deviceHeight + "x" + deviceWidth);
     }
     
     private void applyOrientation(String orientation) {
@@ -656,11 +801,17 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     }
     
     private void setupConfigurationUpdates() {
+        // Stop any existing config updates first
+        if (configHandler != null && configUpdateRunnable != null) {
+            configHandler.removeCallbacks(configUpdateRunnable);
+        }
+        
         configUpdateRunnable = () -> {
             Log.d(TAG, "Periodic configuration update");
             configManager.updateConfigFromGitHub(null);
             
-            // Schedule next update
+            // Schedule next update (only one at a time)
+            configHandler.removeCallbacks(configUpdateRunnable);
             configHandler.postDelayed(configUpdateRunnable, CONFIG_UPDATE_INTERVAL);
         };
         
@@ -694,9 +845,19 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         
         // Hide loading and WebViews
         hideLoadingState();
-        for (int i = 0; i < 3; i++) {
-            webViews[i].setVisibility(View.GONE);
-            backupWebViews[i].setVisibility(View.GONE);
+        if (webViews != null) {
+            for (int i = 0; i < webViews.length; i++) {
+                if (webViews[i] != null) {
+                    webViews[i].setVisibility(View.GONE);
+                }
+            }
+        }
+        if (backupWebViews != null) {
+            for (int i = 0; i < backupWebViews.length; i++) {
+                if (backupWebViews[i] != null) {
+                    backupWebViews[i].setVisibility(View.GONE);
+                }
+            }
         }
         
         // Show error UI
@@ -746,7 +907,7 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     
     private void updateLoadingProgress() {
         if (loadingProgress != null && pages != null) {
-            int totalPages = Math.min(pages.size(), 3);
+            int totalPages = pages.size(); // Use actual page count, not limited to 3
             String progressText = pagesLoaded + "/" + totalPages + " pages loaded";
             loadingProgress.setText(progressText);
             Log.d(TAG, "Loading progress: " + progressText);
@@ -793,12 +954,18 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         hideSystemUI();
         
         // Resume all WebViews in the pool
-        for (int i = 0; i < 3; i++) {
-            if (webViews[i] != null) {
-                webViews[i].onResume();
+        if (webViews != null) {
+            for (int i = 0; i < webViews.length; i++) {
+                if (webViews[i] != null) {
+                    webViews[i].onResume();
+                }
             }
-            if (backupWebViews[i] != null) {
-                backupWebViews[i].onResume();
+        }
+        if (backupWebViews != null) {
+            for (int i = 0; i < backupWebViews.length; i++) {
+                if (backupWebViews[i] != null) {
+                    backupWebViews[i].onResume();
+                }
             }
         }
     }
@@ -808,12 +975,18 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         super.onPause();
         
         // Pause all WebViews in the pool
-        for (int i = 0; i < 3; i++) {
-            if (webViews[i] != null) {
-                webViews[i].onPause();
+        if (webViews != null) {
+            for (int i = 0; i < webViews.length; i++) {
+                if (webViews[i] != null) {
+                    webViews[i].onPause();
+                }
             }
-            if (backupWebViews[i] != null) {
-                backupWebViews[i].onPause();
+        }
+        if (backupWebViews != null) {
+            for (int i = 0; i < backupWebViews.length; i++) {
+                if (backupWebViews[i] != null) {
+                    backupWebViews[i].onPause();
+                }
             }
         }
     }
@@ -850,16 +1023,23 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         }
         
         // Clean up all WebViews in the pool
-        for (int i = 0; i < 3; i++) {
-            if (webViews[i] != null) {
-                webViews[i].clearCache(true);
-                webViews[i].clearHistory();
-                webViews[i].destroy();
+        if (webViews != null) {
+            for (int i = 0; i < webViews.length; i++) {
+                if (webViews[i] != null) {
+                    webViews[i].clearCache(true);
+                    webViews[i].clearHistory();
+                    webViews[i].destroy();
+                }
             }
-            if (backupWebViews[i] != null) {
-                backupWebViews[i].clearCache(true);
-                backupWebViews[i].clearHistory();
-                backupWebViews[i].destroy();
+        }
+        
+        if (backupWebViews != null) {
+            for (int i = 0; i < backupWebViews.length; i++) {
+                if (backupWebViews[i] != null) {
+                    backupWebViews[i].clearCache(true);
+                    backupWebViews[i].clearHistory();
+                    backupWebViews[i].destroy();
+                }
             }
         }
         
@@ -875,9 +1055,44 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     
     @Override
     public void onBackPressed() {
-        // Disable back button for kiosk mode
-        // Uncomment the line below if you want to allow back navigation
-        // super.onBackPressed();
+        long currentTime = System.currentTimeMillis();
+        
+        // Check if this is a double back press (within 2 seconds)
+        if (currentTime - lastBackPressTime < DOUBLE_BACK_PRESS_INTERVAL) {
+            Log.i(TAG, "Double back press detected, opening configuration screen");
+            openConfigurationScreen();
+        } else {
+            Log.d(TAG, "Single back press detected, waiting for double press");
+            // Show a brief toast to let user know about double press
+            Toast.makeText(this, "Press back again to open configuration", Toast.LENGTH_SHORT).show();
+        }
+        
+        // Update the last back press time
+        lastBackPressTime = currentTime;
+    }
+    
+    /**
+     * Open the configuration screen (UpdateActivity)
+     */
+    private void openConfigurationScreen() {
+        Log.i(TAG, "Opening configuration screen");
+        
+        try {
+            // Create intent to start UpdateActivity
+            Intent configIntent = new Intent(this, UpdateActivity.class);
+            
+            // Don't mark it as first time setup since we're accessing from main app
+            configIntent.putExtra("firstTimeSetup", false);
+            
+            // Start the configuration activity
+            startActivity(configIntent);
+            
+            Log.i(TAG, "Successfully opened configuration screen");
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error opening configuration screen", e);
+            Toast.makeText(this, "Error opening configuration", Toast.LENGTH_SHORT).show();
+        }
     }
     
     /**
