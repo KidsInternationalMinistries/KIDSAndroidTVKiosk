@@ -47,6 +47,8 @@ public class UpdateActivity extends Activity {
     // GitHub API URLs to get release information
     private static final String GITHUB_RELEASES_API_URL = 
         "https://api.github.com/repos/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases";
+    private static final String GITHUB_DEBUG_RELEASE_API_URL = 
+        "https://api.github.com/repos/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/tags/debug";
     private static final String GITHUB_LATEST_RELEASE_API_URL = 
         "https://api.github.com/repos/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/latest";
     
@@ -384,7 +386,7 @@ public class UpdateActivity extends Activity {
     
     private String getReleaseDownloadUrl(String buildType) {
         try {
-            String apiUrl = buildType.equals("Release") ? GITHUB_LATEST_RELEASE_API_URL : GITHUB_RELEASES_API_URL;
+            String apiUrl = buildType.equals("Release") ? GITHUB_LATEST_RELEASE_API_URL : GITHUB_DEBUG_RELEASE_API_URL;
             Log.i(TAG, "Fetching " + buildType + " release from GitHub API: " + apiUrl);
             
             URL url = new URL(apiUrl);
@@ -411,9 +413,8 @@ public class UpdateActivity extends Activity {
                     // For Release builds, use latest release API (returns single release object)
                     return parseReleaseForApk(new JSONObject(response.toString()), buildType);
                 } else {
-                    // For Debug builds, use releases API (returns array) and find latest debug/pre-release
-                    JSONArray releases = new JSONArray(response.toString());
-                    return findDebugReleaseApk(releases);
+                    // For Debug builds, use debug release API (returns single release object)
+                    return parseReleaseForApk(new JSONObject(response.toString()), buildType);
                 }
                 
             } else {
