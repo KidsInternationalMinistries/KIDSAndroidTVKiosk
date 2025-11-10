@@ -47,8 +47,6 @@ public class UpdateActivity extends Activity {
     // GitHub API URLs to get release information
     private static final String GITHUB_RELEASES_API_URL = 
         "https://api.github.com/repos/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases";
-    private static final String GITHUB_DEBUG_RELEASE_API_URL = 
-        "https://api.github.com/repos/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/tags/debug";
     private static final String GITHUB_LATEST_RELEASE_API_URL = 
         "https://api.github.com/repos/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/latest";
     
@@ -386,7 +384,7 @@ public class UpdateActivity extends Activity {
     
     private String getReleaseDownloadUrl(String buildType) {
         try {
-            String apiUrl = buildType.equals("Release") ? GITHUB_LATEST_RELEASE_API_URL : GITHUB_DEBUG_RELEASE_API_URL;
+            String apiUrl = buildType.equals("Release") ? GITHUB_LATEST_RELEASE_API_URL : GITHUB_RELEASES_API_URL;
             Log.i(TAG, "Fetching " + buildType + " release from GitHub API: " + apiUrl);
             
             URL url = new URL(apiUrl);
@@ -413,8 +411,9 @@ public class UpdateActivity extends Activity {
                     // For Release builds, use latest release API (returns single release object)
                     return parseReleaseForApk(new JSONObject(response.toString()), buildType);
                 } else {
-                    // For Debug builds, use debug release API (returns single release object)
-                    return parseReleaseForApk(new JSONObject(response.toString()), buildType);
+                    // For Debug builds, use releases API (returns array) and find latest debug/pre-release
+                    JSONArray releases = new JSONArray(response.toString());
+                    return findDebugReleaseApk(releases);
                 }
                 
             } else {
@@ -563,8 +562,8 @@ public class UpdateActivity extends Activity {
             Uri downloadUri = Uri.parse(apkUrl);
             DownloadManager.Request request = new DownloadManager.Request(downloadUri);
             
-            // Use app's external files directory for download (safer for DownloadManager)
-            // We'll copy to public Downloads later for installation
+            // Use app's external files directory instead of public Downloads
+            // This doesn't require MANAGE_EXTERNAL_STORAGE permission on Android 11+
             File externalFilesDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
             if (externalFilesDir == null) {
                 throw new Exception("External files directory not available");
@@ -744,7 +743,7 @@ public class UpdateActivity extends Activity {
         }
         
         try {
-            // Get the downloaded APK from app's external files directory
+            // Use the same location as download - app's external files directory
             File externalFilesDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
             if (externalFilesDir == null) {
                 String errorMsg = "Error: External files directory not available";
@@ -755,38 +754,7 @@ public class UpdateActivity extends Activity {
                 return;
             }
             
-            File downloadedApk = new File(externalFilesDir, "kiosk-update.apk");
-            
-            if (!downloadedApk.exists()) {
-                String errorMsg = "Error: Downloaded APK not found at " + downloadedApk.getAbsolutePath();
-                Log.e(TAG, errorMsg);
-                statusText.setText(errorMsg);
-                saveAndInstallButton.setEnabled(true);
-                Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show();
-                return;
-            }
-            
-            // Copy the APK to public Downloads directory for installation
-            File downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-            if (!downloadsDir.exists()) {
-                downloadsDir.mkdirs();
-            }
-            
-            File apkFile = new File(downloadsDir, "kiosk-update-" + System.currentTimeMillis() + ".apk");
-            
-            // Copy the file
-            try (java.io.FileInputStream fis = new java.io.FileInputStream(downloadedApk);
-                 java.io.FileOutputStream fos = new java.io.FileOutputStream(apkFile)) {
-                
-                byte[] buffer = new byte[1024];
-                int length;
-                while ((length = fis.read(buffer)) > 0) {
-                    fos.write(buffer, 0, length);
-                }
-            }
-            
-            // Make file readable by everyone
-            apkFile.setReadable(true, false);
+            File apkFile = new File(externalFilesDir, "kiosk-update.apk");
             
             Log.i(TAG, "Checking for APK file at: " + apkFile.getAbsolutePath());
             
@@ -820,13 +788,80 @@ public class UpdateActivity extends Activity {
                 return;
             }
             
-            // Install APK using direct file URI (should work with public Downloads directory)
+            // Install APK using a multi-step approach for maximum compatibility
             Intent installIntent = new Intent(Intent.ACTION_VIEW);
-            Uri apkUri = Uri.fromFile(apkFile);
-            installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
-            installIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            Uri apkUri = null;
             
-            Log.i(TAG, "Using direct file URI from public Downloads: " + apkUri.toString());
+            // Strategy 1: Try FileProvider first (most secure)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                try {
+                    apkUri = androidx.core.content.FileProvider.getUriForFile(
+                        this, 
+                        getFileProviderAuthority(), 
+                        apkFile
+                    );
+                    installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+                    installIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    installIntent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                    
+                    Log.i(TAG, "Strategy 1: Using FileProvider URI: " + apkUri.toString());
+                    Log.i(TAG, "FileProvider authority: " + getFileProviderAuthority());
+                    
+                    // Test if this intent can be resolved
+                    if (installIntent.resolveActivity(getPackageManager()) != null) {
+                        Log.i(TAG, "FileProvider intent can be resolved, proceeding");
+                    } else {
+                        Log.w(TAG, "FileProvider intent cannot be resolved, trying fallback");
+                        throw new Exception("FileProvider intent not resolvable");
+                    }
+                    
+                } catch (Exception e) {
+                    Log.e(TAG, "Strategy 1 failed: " + e.getMessage(), e);
+                    
+                    // Strategy 2: Copy to public downloads and use direct file URI
+                    try {
+                        File downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+                        if (!downloadsDir.exists()) {
+                            downloadsDir.mkdirs();
+                        }
+                        
+                        File publicApk = new File(downloadsDir, "kiosk-update-" + System.currentTimeMillis() + ".apk");
+                        
+                        // Copy APK to public location
+                        java.io.FileInputStream fis = new java.io.FileInputStream(apkFile);
+                        java.io.FileOutputStream fos = new java.io.FileOutputStream(publicApk);
+                        byte[] buffer = new byte[1024];
+                        int length;
+                        while ((length = fis.read(buffer)) > 0) {
+                            fos.write(buffer, 0, length);
+                        }
+                        fis.close();
+                        fos.close();
+                        
+                        // Make file readable
+                        publicApk.setReadable(true, false);
+                        
+                        apkUri = Uri.fromFile(publicApk);
+                        installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+                        
+                        Log.i(TAG, "Strategy 2: Copied APK to public location: " + publicApk.getAbsolutePath());
+                        Log.i(TAG, "Using file URI: " + apkUri.toString());
+                        
+                    } catch (Exception e2) {
+                        Log.e(TAG, "Strategy 2 failed: " + e2.getMessage(), e2);
+                        
+                        // Strategy 3: Last resort - direct file URI from original location
+                        apkUri = Uri.fromFile(apkFile);
+                        installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+                        Log.i(TAG, "Strategy 3: Using direct file URI: " + apkUri.toString());
+                    }
+                }
+            } else {
+                // For older Android versions, use direct file URI
+                apkUri = Uri.fromFile(apkFile);
+                installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+                Log.i(TAG, "Legacy: Using direct file URI for older Android: " + apkUri.toString());
+            }
             
             installIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             
