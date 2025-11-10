@@ -156,6 +156,7 @@ if ([string]::IsNullOrEmpty($Message)) {
 Write-Host "Publishing $BuildType build with message: '$Message'" -ForegroundColor Cyan
 if ($BuildType -eq "release") {
     Write-Host "Version: $Version" -ForegroundColor Cyan
+    Write-Host "Note: Release builds will force-push to allow republishing" -ForegroundColor Yellow
 }
 Write-Host ""
 
@@ -203,6 +204,14 @@ Write-Host "$BuildType APK built successfully" -ForegroundColor Green
 # Step 4: Create tag for release builds
 if ($needsTag) {
     Write-Host "Step 4: Creating tag $releaseTag..." -ForegroundColor Yellow
+    
+    # Delete existing local tag if it exists (for republishing)
+    $existingTag = git tag -l $releaseTag
+    if ($existingTag) {
+        Write-Host "Deleting existing local tag $releaseTag..." -ForegroundColor Cyan
+        git tag -d $releaseTag
+    }
+    
     git tag -a $releaseTag -m "$Message"
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Error: Failed to create tag" -ForegroundColor Red
@@ -216,7 +225,11 @@ if ($needsTag) {
 
 # Step: Push to GitHub
 Write-Host "Step $stepNum`: Pushing to GitHub..." -ForegroundColor Yellow
-git push origin $currentBranch
+if ($BuildType -eq "release") {
+    git push origin $currentBranch --force
+} else {
+    git push origin $currentBranch
+}
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Error: Failed to push to GitHub" -ForegroundColor Red
     exit 1
@@ -224,7 +237,8 @@ if ($LASTEXITCODE -ne 0) {
 
 # Push tag for release builds
 if ($needsTag) {
-    git push origin $releaseTag
+    # For releases, force push the tag to allow republishing
+    git push origin $releaseTag --force
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Error: Failed to push tag" -ForegroundColor Red
         exit 1
@@ -244,6 +258,14 @@ if ($BuildType -eq "debug") {
         & $ghCommand release delete "debug" --yes
     }
     Write-Host "Creating new debug pre-release..." -ForegroundColor Cyan
+} else {
+    # Check if release version already exists and delete it (for republishing)
+    $existingRelease = & $ghCommand release view $releaseTag 2>$null
+    if ($existingRelease) {
+        Write-Host "Deleting existing release $releaseTag for republishing..." -ForegroundColor Cyan
+        & $ghCommand release delete $releaseTag --yes
+    }
+    Write-Host "Creating new release $releaseTag..." -ForegroundColor Cyan
 }
 
 # Create GitHub release
