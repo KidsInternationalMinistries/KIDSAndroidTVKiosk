@@ -187,7 +187,7 @@ if ($statusCheck) {
 
 # Step 3: Build APK
 Write-Host "Step 3: Building $BuildType APK..." -ForegroundColor Yellow
-& .\gradlew $buildTask
+& .\gradlew.bat $buildTask
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Error: Failed to build $BuildType APK" -ForegroundColor Red
     exit 1
