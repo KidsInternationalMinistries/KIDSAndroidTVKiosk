@@ -630,10 +630,42 @@ public class UpdateActivity extends Activity {
                 Log.w(TAG, "File size mismatch: expected " + contentLength + ", got " + finalFileSize);
             }
             
-            runOnUiThread(() -> {
-                statusText.setText("Download completed! Verifying file...");
-                verifyWithRetry(3);
-            });
+            // Also copy the downloaded APK to the public Downloads folder so it can be accessed
+            // from adb and for easier manual inspection. Keep the original in the app's external files.
+            try {
+                File downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+                if (!downloadsDir.exists()) {
+                    downloadsDir.mkdirs();
+                }
+                File publicApk = new File(downloadsDir, "kiosk-update.apk");
+
+                try (java.io.FileInputStream fis = new java.io.FileInputStream(downloadFile);
+                     java.io.FileOutputStream fos = new java.io.FileOutputStream(publicApk)) {
+                    byte[] buffer = new byte[8192];
+                    int length;
+                    while ((length = fis.read(buffer)) > 0) {
+                        fos.write(buffer, 0, length);
+                    }
+                }
+
+                // Make file world-readable so adb or other callers can read it
+                publicApk.setReadable(true, false);
+                final long publicSize = publicApk.length();
+                final String publicPath = publicApk.getAbsolutePath();
+                Log.i(TAG, "Copied APK to public Downloads: " + publicPath + " (" + publicSize + " bytes)");
+
+                runOnUiThread(() -> {
+                    statusText.setText("Download completed! Saved to: " + publicPath + "\nSize: " + (publicSize / 1024) + " KB\nVerifying file...");
+                    verifyWithRetry(3);
+                });
+
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to copy APK to public Downloads", e);
+                runOnUiThread(() -> {
+                    statusText.setText("Download completed! Verifying file...");
+                    verifyWithRetry(3);
+                });
+            }
             
         } catch (Exception e) {
             Log.e(TAG, "Direct download failed", e);
@@ -664,7 +696,8 @@ public class UpdateActivity extends Activity {
         Log.i(TAG, "Attempting file verification (attempts left: " + attemptsLeft + ")");
         
         if (verifyDownloadedAPK()) {
-            statusText.setText("File verified! Starting installation...");
+            // Display file information before installation
+            displayDownloadedFileInfo();
             new android.os.Handler().postDelayed(() -> installAPK(), 500);
         } else {
             Log.w(TAG, "Verification attempt failed, retrying in 500ms");
@@ -748,6 +781,44 @@ public class UpdateActivity extends Activity {
         }
     }
 
+    private void displayDownloadedFileInfo() {
+        try {
+            File externalFilesDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+            if (externalFilesDir == null) {
+                statusText.setText("File verified! Starting installation...");
+                return;
+            }
+            
+            File downloadFile = new File(externalFilesDir, "kiosk-update.apk");
+            
+            if (!downloadFile.exists()) {
+                statusText.setText("File verified! Starting installation...");
+                return;
+            }
+            
+            long fileSize = downloadFile.length();
+            String filePath = downloadFile.getAbsolutePath();
+            
+            // Format file size in a human-readable format
+            String formattedSize;
+            if (fileSize >= 1024 * 1024) {
+                formattedSize = String.format("%.2f MB", fileSize / (1024.0 * 1024.0));
+            } else if (fileSize >= 1024) {
+                formattedSize = String.format("%.2f KB", fileSize / 1024.0);
+            } else {
+                formattedSize = fileSize + " bytes";
+            }
+            
+            Log.i(TAG, "Downloaded APK info - Location: " + filePath + ", Size: " + fileSize + " bytes (" + formattedSize + ")");
+            
+            statusText.setText("File verified!\nLocation: " + filePath + "\nSize: " + formattedSize + "\nStarting installation...");
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error getting downloaded file info", e);
+            statusText.setText("File verified! Starting installation...");
+        }
+    }
+
     private void installAPK() {
         // Show confirmation dialog before installation
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -760,7 +831,19 @@ public class UpdateActivity extends Activity {
             statusText.setText("Installation cancelled");
             saveAndInstallButton.setEnabled(true);
         });
-        builder.show();
+        
+        AlertDialog dialog = builder.create();
+        
+        // Position dialog at the top of the screen so file info remains visible
+        android.view.Window window = dialog.getWindow();
+        if (window != null) {
+            android.view.WindowManager.LayoutParams layoutParams = window.getAttributes();
+            layoutParams.gravity = android.view.Gravity.TOP | android.view.Gravity.CENTER_HORIZONTAL;
+            layoutParams.y = 100; // Offset from top in pixels
+            window.setAttributes(layoutParams);
+        }
+        
+        dialog.show();
     }
     
     private void proceedWithInstallation() {
@@ -846,107 +929,138 @@ public class UpdateActivity extends Activity {
                 return;
             }
             
-            // Install APK using a multi-step approach for maximum compatibility
-            Intent installIntent = new Intent(Intent.ACTION_VIEW);
-            Uri apkUri = null;
+            // Use the public Downloads copy for installation (more compatible)
+            File downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+            File publicApk = new File(downloadsDir, "kiosk-update.apk");
             
-            // Strategy 1: Try FileProvider first (most secure)
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-                try {
-                    apkUri = androidx.core.content.FileProvider.getUriForFile(
-                        this, 
-                        getFileProviderAuthority(), 
-                        apkFile
-                    );
-                    installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
-                    installIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                    installIntent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-                    
-                    Log.i(TAG, "Strategy 1: Using FileProvider URI: " + apkUri.toString());
-                    Log.i(TAG, "FileProvider authority: " + getFileProviderAuthority());
-                    
-                    // Test if this intent can be resolved
-                    if (installIntent.resolveActivity(getPackageManager()) != null) {
-                        Log.i(TAG, "FileProvider intent can be resolved, proceeding");
-                    } else {
-                        Log.w(TAG, "FileProvider intent cannot be resolved, trying fallback");
-                        throw new Exception("FileProvider intent not resolvable");
-                    }
-                    
-                } catch (Exception e) {
-                    Log.e(TAG, "Strategy 1 failed: " + e.getMessage(), e);
-                    
-                    // Strategy 2: Copy to public downloads and use direct file URI
-                    try {
-                        File downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-                        if (!downloadsDir.exists()) {
-                            downloadsDir.mkdirs();
-                        }
-                        
-                        File publicApk = new File(downloadsDir, "kiosk-update-" + System.currentTimeMillis() + ".apk");
-                        
-                        // Copy APK to public location
-                        java.io.FileInputStream fis = new java.io.FileInputStream(apkFile);
-                        java.io.FileOutputStream fos = new java.io.FileOutputStream(publicApk);
-                        byte[] buffer = new byte[1024];
-                        int length;
-                        while ((length = fis.read(buffer)) > 0) {
-                            fos.write(buffer, 0, length);
-                        }
-                        fis.close();
-                        fos.close();
-                        
-                        // Make file readable
-                        publicApk.setReadable(true, false);
-                        
-                        apkUri = Uri.fromFile(publicApk);
-                        installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
-                        
-                        Log.i(TAG, "Strategy 2: Copied APK to public location: " + publicApk.getAbsolutePath());
-                        Log.i(TAG, "Using file URI: " + apkUri.toString());
-                        
-                    } catch (Exception e2) {
-                        Log.e(TAG, "Strategy 2 failed: " + e2.getMessage(), e2);
-                        
-                        // Strategy 3: Last resort - direct file URI from original location
-                        apkUri = Uri.fromFile(apkFile);
-                        installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
-                        Log.i(TAG, "Strategy 3: Using direct file URI: " + apkUri.toString());
-                    }
-                }
-            } else {
-                // For older Android versions, use direct file URI
-                apkUri = Uri.fromFile(apkFile);
-                installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
-                Log.i(TAG, "Legacy: Using direct file URI for older Android: " + apkUri.toString());
+            if (!publicApk.exists()) {
+                String errorMsg = "Error: Public APK copy not found at " + publicApk.getAbsolutePath();
+                Log.e(TAG, errorMsg);
+                statusText.setText(errorMsg);
+                saveAndInstallButton.setEnabled(true);
+                Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show();
+                return;
             }
             
-            installIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            Log.i(TAG, "Using public APK file: " + publicApk.getAbsolutePath() + " (" + publicApk.length() + " bytes)");
             
-            statusText.setText("Installing APK...");
-            Log.i(TAG, "Starting APK installation for file: " + apkFile.getAbsolutePath());
+            // Try multiple installation approaches
+            boolean installSuccess = false;
             
-            // Check if there's an activity that can handle the install intent
-            if (installIntent.resolveActivity(getPackageManager()) != null) {
-                
-                // Show final message to user
+            // Strategy 1: Use ACTION_INSTALL_PACKAGE (Android 14+ preferred method)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N && !installSuccess) {
+                try {
+                    Intent installIntent = new Intent(Intent.ACTION_INSTALL_PACKAGE);
+                    Uri apkUri = androidx.core.content.FileProvider.getUriForFile(
+                        this, 
+                        getFileProviderAuthority(), 
+                        publicApk
+                    );
+                    installIntent.setData(apkUri);
+                    installIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    installIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    installIntent.putExtra(Intent.EXTRA_NOT_UNKNOWN_SOURCE, true);
+                    installIntent.putExtra(Intent.EXTRA_RETURN_RESULT, true);
+                    installIntent.putExtra(Intent.EXTRA_INSTALLER_PACKAGE_NAME, getPackageName());
+                    
+                    Log.i(TAG, "Strategy 1: ACTION_INSTALL_PACKAGE with FileProvider");
+                    if (installIntent.resolveActivity(getPackageManager()) != null) {
+                        startActivityForResult(installIntent, 2000);
+                        installSuccess = true;
+                    } else {
+                        Log.w(TAG, "ACTION_INSTALL_PACKAGE not available");
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "Strategy 1 (ACTION_INSTALL_PACKAGE) failed: " + e.getMessage(), e);
+                }
+            }
+            
+            // Strategy 2: Use ACTION_VIEW with direct file URI (older Android/TV compatibility)
+            if (!installSuccess) {
+                try {
+                    Intent installIntent = new Intent(Intent.ACTION_VIEW);
+                    Uri apkUri = Uri.fromFile(publicApk);
+                    installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+                    installIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    installIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    
+                    Log.i(TAG, "Strategy 2: ACTION_VIEW with file URI: " + apkUri.toString());
+                    if (installIntent.resolveActivity(getPackageManager()) != null) {
+                        startActivity(installIntent);
+                        installSuccess = true;
+                    } else {
+                        Log.w(TAG, "ACTION_VIEW with file URI not available");
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "Strategy 2 (ACTION_VIEW file URI) failed: " + e.getMessage(), e);
+                }
+            }
+            
+            // Strategy 3: Use PackageInstaller (programmatic install)
+            if (!installSuccess && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                try {
+                    android.content.pm.PackageInstaller packageInstaller = getPackageManager().getPackageInstaller();
+                    android.content.pm.PackageInstaller.SessionParams params = 
+                        new android.content.pm.PackageInstaller.SessionParams(
+                            android.content.pm.PackageInstaller.SessionParams.MODE_FULL_INSTALL);
+                    params.setAppPackageName(getPackageName());
+                    
+                    int sessionId = packageInstaller.createSession(params);
+                    android.content.pm.PackageInstaller.Session session = packageInstaller.openSession(sessionId);
+                    
+                    java.io.OutputStream out = session.openWrite("COSU", 0, -1);
+                    java.io.FileInputStream in = new java.io.FileInputStream(publicApk);
+                    byte[] buffer = new byte[65536];
+                    int c;
+                    while ((c = in.read(buffer)) != -1) {
+                        out.write(buffer, 0, c);
+                    }
+                    session.fsync(out);
+                    in.close();
+                    out.close();
+                    
+                    Intent intent = new Intent(this, UpdateActivity.class);
+                    android.app.PendingIntent pendingIntent = android.app.PendingIntent.getActivity(this, 0, intent, android.app.PendingIntent.FLAG_IMMUTABLE);
+                    android.content.IntentSender statusReceiver = pendingIntent.getIntentSender();
+                    session.commit(statusReceiver);
+                    
+                    Log.i(TAG, "Strategy 3: PackageInstaller programmatic install");
+                    installSuccess = true;
+                } catch (Exception e) {
+                    Log.e(TAG, "Strategy 3 (PackageInstaller) failed: " + e.getMessage(), e);
+                }
+            }
+            
+            if (!installSuccess) {
+                // Strategy 4: Legacy method for very old Android versions
+                try {
+                    Intent installIntent = new Intent(Intent.ACTION_VIEW);
+                    installIntent.setDataAndType(Uri.fromFile(publicApk), "application/vnd.android.package-archive");
+                    installIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    
+                    Log.i(TAG, "Strategy 4: Legacy ACTION_VIEW");
+                    startActivity(installIntent);
+                    installSuccess = true;
+                } catch (Exception e) {
+                    Log.e(TAG, "Strategy 4 (Legacy) failed: " + e.getMessage(), e);
+                }
+            }
+            
+            if (installSuccess) {
                 statusText.setText("Installation started. App will close now. Please follow the installation prompts.");
+                Log.i(TAG, "APK installation initiated successfully");
                 
-                // Start the installation
-                startActivity(installIntent);
-                
-                // Give user time to read the message, then close the app
+                // Close the app after a brief delay
                 new android.os.Handler().postDelayed(() -> {
-                    // Close this activity and the entire application
-                    finishAffinity(); // This closes all activities in the app
-                    System.exit(0);   // Fully terminate the app process
-                }, 2000); // Wait 2 seconds
-                
+                    finishAffinity();
+                    System.exit(0);
+                }, 2000);
             } else {
-                Log.e(TAG, "No activity found to handle APK installation intent");
-                statusText.setText("Error: Device cannot install APK files");
+                String errorMsg = "All installation methods failed. Please install manually from Downloads folder.";
+                Log.e(TAG, errorMsg);
+                statusText.setText(errorMsg + "\nFile: " + publicApk.getAbsolutePath());
                 saveAndInstallButton.setEnabled(true);
-                Toast.makeText(this, "Device does not support APK installation", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show();
             }
             
         } catch (Exception e) {
