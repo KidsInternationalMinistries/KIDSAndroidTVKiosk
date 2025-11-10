@@ -11,7 +11,7 @@ android {
         minSdk 30  // Android 11 (API level 30)
         targetSdk 34
         versionCode 114  // Sequential build number starting from 100
-        versionName "1.9 (PreRelease)"  // Major.Minor version
+        versionName "1.9"  // Major.Minor version
     }
 
     buildTypes {
