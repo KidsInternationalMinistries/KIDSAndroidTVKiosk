@@ -58,29 +58,33 @@ try {
     $prereleaseTitle = $prerelease.name
     Write-Host "Found prerelease: $prereleaseTitle (tag: prerelease)" -ForegroundColor Yellow
     
-    # Extract version from title and remove "(PreRelease)" suffix
-    # Handle both formats:
-    # New format: "v1.8 (PreRelease)-build107 (PreRelease)" 
-    # Expected format: "v1.8-build107 (PreRelease)"
-    if ($prereleaseTitle -match '^v(.+?)\s+\(PreRelease\)-build(\d+)\s+\(PreRelease\)$') {
-        # New format with escaped parentheses in version name
+    # Extract version from title and create clean production tag
+    # Expected format from new script: "v1.8 (PreRelease)-build107"
+    if ($prereleaseTitle -match '^v(\d+\.\d+)\s+\(PreRelease\)-build(\d+)$') {
+        # Clean format: "v1.8 (PreRelease)-build107"
         $versionBase = $matches[1]
         $buildNumber = $matches[2]
         $newTagName = "v$versionBase-build$buildNumber"
-        Write-Host "Promoting PreRelease version (new format) to stable: $newTagName" -ForegroundColor Yellow
+        Write-Host "Promoting PreRelease version to stable: $newTagName" -ForegroundColor Yellow
+    } elseif ($prereleaseTitle -match '^v(.+?)\s+\(PreRelease\)-Debug-build(\d+)\s+\(PreRelease\)$') {
+        # Legacy debug format with -Debug in the middle
+        $versionBase = $matches[1]
+        $buildNumber = $matches[2]
+        $newTagName = "v$versionBase-build$buildNumber"
+        Write-Host "Promoting PreRelease debug version to stable: $newTagName" -ForegroundColor Yellow
+    } elseif ($prereleaseTitle -match '^v(.+?)\s+\(PreRelease\)-build(\d+)\s+\(PreRelease\)$') {
+        # Legacy format with double PreRelease
+        $versionBase = $matches[1]
+        $buildNumber = $matches[2]
+        $newTagName = "v$versionBase-build$buildNumber"
+        Write-Host "Promoting PreRelease version (legacy format) to stable: $newTagName" -ForegroundColor Yellow
     } elseif ($prereleaseTitle -match '^(v\d+\.\d+-build\d+)\s+\(PreRelease\)$') {
-        # Expected format: "v1.8-build107 (PreRelease)"
+        # Simple format: "v1.8-build107 (PreRelease)"
         $newTagName = $matches[1]  # This will be like "v1.8-build107"
-        Write-Host "Promoting PreRelease version (expected format) to stable: $newTagName" -ForegroundColor Yellow
-    } elseif ($prereleaseTitle -match '^v\d+\.\d+-build\d+$') {
-        # Handle old format without (PreRelease) suffix
-        $newTagName = $prereleaseTitle
-        Write-Host "Promoting version (old format): $newTagName" -ForegroundColor Yellow
+        Write-Host "Promoting PreRelease version (simple format) to stable: $newTagName" -ForegroundColor Yellow
     } else {
         Write-Host "Unexpected prerelease title format: $prereleaseTitle" -ForegroundColor Red
-        Write-Host "Expected formats:" -ForegroundColor Red
-        Write-Host "  v1.8-build104 (PreRelease)" -ForegroundColor Red
-        Write-Host "  v1.8 (PreRelease)-build107 (PreRelease)" -ForegroundColor Red
+        Write-Host "Expected format: v1.8 (PreRelease)-build107" -ForegroundColor Red
         exit 1
     }
     
@@ -92,16 +96,15 @@ try {
     New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
     & $ghCommand release download prerelease --dir $tempDir
     
-    # Rename APK files to remove "-prerelease" suffix
-    Write-Host "Renaming APK files to remove prerelease suffix..." -ForegroundColor Yellow
+    # Rename APK files to production format
+    Write-Host "Renaming APK files to production format..." -ForegroundColor Yellow
     $apkFiles = Get-ChildItem -Path $tempDir -Filter "*.apk"
     foreach ($apkFile in $apkFiles) {
-        if ($apkFile.Name -match "-prerelease\.apk$") {
-            $newApkName = $apkFile.Name -replace "-prerelease\.apk$", ".apk"
-            $newApkPath = Join-Path $tempDir $newApkName
-            Move-Item $apkFile.FullName $newApkPath
-            Write-Host "Renamed: $($apkFile.Name) -> $newApkName" -ForegroundColor Green
-        }
+        # Create clean production filename: kidsandroidtvkiosk-v1.16-build125.apk
+        $newApkName = "kidsandroidtvkiosk-$newTagName.apk"
+        $newApkPath = Join-Path $tempDir $newApkName
+        Move-Item $apkFile.FullName $newApkPath
+        Write-Host "Renamed: $($apkFile.Name) -> $newApkName" -ForegroundColor Green
     }
     
     # Delete the old prerelease GitHub release (we'll recreate it as stable)
@@ -219,13 +222,8 @@ try {
         .\gradlew.bat clean assembleRelease
         
         if ($LASTEXITCODE -eq 0) {
-            # Create prerelease package
-            $prereleaseApkName = "kidsandroidtvkiosk-$nextVersionName-build$nextVersionCode-prerelease.apk"
-            $sourceApk = "app\build\outputs\apk\release\app-release.apk"
-            Copy-Item $sourceApk $prereleaseApkName
-            
             # Create git commit and tag for next prerelease
-            $versionTag = "v$nextVersionName-build$nextVersionCode (PreRelease)"
+            $versionTag = "v$nextVersionName (PreRelease)-build$nextVersionCode"
             git add app\build.gradle
             git commit -m "Bump to $nextVersionCode for next prerelease $versionTag"
             
@@ -234,8 +232,9 @@ try {
             git push origin main
             git push origin prerelease --force
             
-            # Create GitHub prerelease
-            & $ghCommand release create prerelease $prereleaseApkName --title "$versionTag" --notes "Prerelease build $nextVersionCode" --prerelease
+            # Create GitHub prerelease (use APK directly from build output)
+            $sourceApk = "app\build\outputs\apk\release\app-release.apk"
+            & $ghCommand release create prerelease $sourceApk --title "$versionTag" --notes "Prerelease build $nextVersionCode" --prerelease
             
             if ($LASTEXITCODE -eq 0) {
                 Write-Host "Next prerelease created successfully!" -ForegroundColor Green
