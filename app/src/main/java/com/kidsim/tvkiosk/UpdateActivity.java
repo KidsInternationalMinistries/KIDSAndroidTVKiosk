@@ -9,6 +9,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageInstaller;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -114,14 +115,8 @@ public class UpdateActivity extends Activity {
         deviceIdSpinner = findViewById(R.id.deviceIdSpinner);
         statusText = findViewById(R.id.statusText);
         currentVersionText = findViewById(R.id.currentVersionText);
-        saveAndInstallButton = findViewById(R.id.saveAndInstallButton);
-        preReleaseButton = findViewById(R.id.preReleaseButton);
         kioskButton = findViewById(R.id.kioskButton);
         exitButton = findViewById(R.id.exitButton);
-        
-        // Start with update buttons disabled until all selections are made
-        saveAndInstallButton.setEnabled(false);
-        preReleaseButton.setEnabled(false);
         
         // Set button text based on app type
         updateButtonText();
@@ -197,8 +192,6 @@ public class UpdateActivity extends Activity {
     }
     
     private void setupEventHandlers() {
-        saveAndInstallButton.setOnClickListener(v -> saveAndInstall());
-        preReleaseButton.setOnClickListener(v -> saveAndInstallPreRelease());
         kioskButton.setOnClickListener(v -> returnToKiosk());
         exitButton.setOnClickListener(v -> exitApp());
     }
@@ -278,18 +271,29 @@ public class UpdateActivity extends Activity {
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 checkAllSelectionsValid();
                 
-                // Save orientation and device ID changes immediately
+                // Save all configuration changes immediately
+                if (parent == buildTypeSpinner && buildTypeSpinner.getSelectedItem() != null) {
+                    String buildType = buildTypeSpinner.getSelectedItem().toString();
+                    SharedPreferences.Editor editor = preferences.edit();
+                    editor.putString("buildType", buildType);
+                    editor.apply();
+                    Log.i(TAG, "Auto-saved build type: " + buildType);
+                }
+                
                 if (parent == orientationSpinner && orientationSpinner.getSelectedItem() != null) {
                     String orientation = orientationSpinner.getSelectedItem().toString();
                     SharedPreferences.Editor editor = preferences.edit();
                     editor.putString("orientation", orientation);
                     editor.apply();
-                    Log.i(TAG, "Auto-saved orientation: " + orientation);
+                    
+                    // Apply orientation change immediately to UpdateActivity
+                    applyOrientationToActivity(orientation);
+                    Log.i(TAG, "Auto-saved and applied orientation: " + orientation);
                 }
                 
                 if (parent == deviceIdSpinner && deviceIdSpinner.getSelectedItem() != null) {
                     String deviceId = deviceIdSpinner.getSelectedItem().toString();
-                    if (!deviceId.isEmpty()) {
+                    if (!deviceId.isEmpty() && !deviceId.startsWith("Loading")) {
                         SharedPreferences.Editor editor = preferences.edit();
                         editor.putString("deviceId", deviceId);
                         editor.apply();
@@ -315,25 +319,26 @@ public class UpdateActivity extends Activity {
         checkAllSelectionsValid();
     }
     
+    /**
+     * Apply orientation change immediately to the current UpdateActivity
+     * Forces the display to rotate 90 degrees for Portrait, regardless of device orientation
+     */
+    private void applyOrientationToActivity(String orientation) {
+        try {
+            int orientationValue = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE;
+            if ("Portrait".equalsIgnoreCase(orientation)) {
+                orientationValue = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT;
+            }
+            setRequestedOrientation(orientationValue);
+            Log.d(TAG, "Applied forced orientation " + orientation + " to UpdateActivity (rotated display by 90 degrees)");
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to apply orientation: " + e.getMessage());
+        }
+    }
+    
     private void checkAllSelectionsValid() {
-        // Build type is automatic, just check orientation and device ID
-        boolean hasValidSelections = 
-            orientationSpinner.getSelectedItem() != null &&
-            deviceIdSpinner.getSelectedItem() != null &&
-            !deviceIdSpinner.getSelectedItem().toString().isEmpty();
-        
-        saveAndInstallButton.setEnabled(hasValidSelections);
-        preReleaseButton.setEnabled(hasValidSelections);
-        
-        // Make sure the button visual state updates properly
-        saveAndInstallButton.refreshDrawableState();
-        preReleaseButton.refreshDrawableState();
-        
-        String appType = "Release"; // Unified app
-        Log.d(TAG, "Button enabled: " + hasValidSelections + 
-               " (App Type: " + appType + " (unified)" +
-               ", Orientation: " + (orientationSpinner.getSelectedItem() != null ? orientationSpinner.getSelectedItem().toString() : "null") +
-               ", DeviceId: " + (deviceIdSpinner.getSelectedItem() != null ? deviceIdSpinner.getSelectedItem().toString() : "null") + ")");
+        // Configuration validation is no longer needed since install buttons are removed
+        // This method is kept for compatibility but does nothing
     }
     
     private void saveAndInstallPreRelease() {

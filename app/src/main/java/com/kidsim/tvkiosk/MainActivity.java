@@ -791,7 +791,7 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         }
         
         setRequestedOrientation(orientationValue);
-        Log.d(TAG, "Set orientation to: " + orientation);
+        Log.d(TAG, "Set forced orientation to: " + orientation);
     }
     
     private void stopPageRotation() {
