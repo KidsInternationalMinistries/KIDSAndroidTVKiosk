@@ -11,7 +11,7 @@ android {
         minSdk 26  // Android 8.0 - needed for adaptive icons, still broad compatibility
         targetSdk 31  // Android 12 - modern but compatible
         versionCode 126  // Sequential build number starting from 100
-        versionName "v1.16 (PreRelease)"  // Clean prerelease format
+        versionName "1.16"  // Clean prerelease format
     }
 
     buildTypes {
