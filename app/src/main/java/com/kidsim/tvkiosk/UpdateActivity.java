@@ -52,7 +52,7 @@ public class UpdateActivity extends Activity {
         isFirstTimeSetup = getIntent().getBooleanExtra("firstTimeSetup", false);
         
         // Initialize components
-        preferences = getSharedPreferences("KioskUpdatePrefs", MODE_PRIVATE);
+        preferences = getSharedPreferences("DeviceConfig", MODE_PRIVATE);  // Use same prefs as DeviceIdManager
         deviceIdManager = new DeviceIdManager(this);
         configManager = new ConfigurationManager(this);
         executor = Executors.newSingleThreadExecutor();
@@ -240,7 +240,7 @@ public class UpdateActivity extends Activity {
                     
                     // Apply orientation change immediately to UpdateActivity
                     applyOrientationToActivity(orientation);
-                    Log.i(TAG, "Auto-saved and applied orientation: " + orientation);
+                    Log.i(TAG, "Auto-saved and applied orientation: " + orientation + " to both preference stores");
                 }
                 
                 if (parent == deviceIdSpinner && deviceIdSpinner.getSelectedItem() != null) {
