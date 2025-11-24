@@ -181,12 +181,25 @@ if ($existingRelease) {
 }
 Write-Host "Creating new prerelease..." -ForegroundColor Cyan
 
-# Create GitHub prerelease directly with the APK (no copying to root)
-& $ghCommand release create $releaseTag $apkPath --title $releaseTitle --notes $releaseNotes --prerelease --target $currentBranch
+# Create properly named prerelease APK for bootstrap compatibility
+if ($baseVersionName -match '^(\d+\.\d+)\s+\(PreRelease\)$') {
+    $cleanVersion = $matches[1]
+    $prereleaseApkName = "kidsandroidtvkiosk-v$cleanVersion-build$newVersionCode-prerelease.apk"
+} else {
+    $prereleaseApkName = "kidsandroidtvkiosk-prerelease-build$newVersionCode.apk"
+}
+
+Copy-Item $apkPath $prereleaseApkName
+
+# Create GitHub prerelease with properly named APK
+& $ghCommand release create $releaseTag $prereleaseApkName --title $releaseTitle --notes $releaseNotes --prerelease --target $currentBranch
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Error: Failed to create GitHub prerelease" -ForegroundColor Red
     exit 1
 }
+
+# Clean up the copied APK file
+Remove-Item $prereleaseApkName -Force
 
 # Success summary
 Write-Host ""
