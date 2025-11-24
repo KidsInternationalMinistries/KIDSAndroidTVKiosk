@@ -148,12 +148,12 @@
             android:layout_width="0dp"
             android:layout_height="50dp"
             android:layout_weight="1"
-            android:text="Kiosk"
-            android:textSize="16sp"
+            android:text="Launch Kiosk"
+            android:textSize="14sp"
             android:textStyle="bold"
             android:textColor="#ffffff"
             android:background="@drawable/install_button_background"
-            android:layout_marginEnd="10dp"
+            android:layout_marginEnd="5dp"
             android:focusable="true"
             android:focusableInTouchMode="true" />
 
@@ -162,13 +162,28 @@
             android:layout_width="0dp"
             android:layout_height="50dp"
             android:layout_weight="1"
-            android:text="Update"
-            android:textSize="16sp"
+            android:text="Install Update"
+            android:textSize="14sp"
             android:textStyle="bold"
             android:textColor="#ffffff"
             android:background="@drawable/install_button_background"
-            android:layout_marginStart="5dp"
-            android:layout_marginEnd="5dp"
+            android:layout_marginStart="2dp"
+            android:layout_marginEnd="2dp"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
+
+        <Button
+            android:id="@+id/preReleaseButton"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            android:text="Install PreRelease"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="#ffffff"
+            android:background="@drawable/install_button_background"
+            android:layout_marginStart="2dp"
+            android:layout_marginEnd="2dp"
             android:focusable="true"
             android:focusableInTouchMode="true" />
 
@@ -182,7 +197,7 @@
             android:textStyle="bold"
             android:textColor="#ffffff"
             android:background="@drawable/install_button_background"
-            android:layout_marginStart="10dp"
+            android:layout_marginStart="5dp"
             android:focusable="true"
             android:focusableInTouchMode="true" />
 

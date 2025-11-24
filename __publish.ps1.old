@@ -179,7 +179,7 @@ if ($BuildType -eq "debug") {
         }
     }
     
-    $releaseTag = "latest"
+    $releaseTag = $Version
     $releaseTitle = "Release $Version"
     $releaseNotes = if ([string]::IsNullOrWhiteSpace($Message)) { "Release $Version" } else { $Message }
 }
@@ -249,16 +249,18 @@ Write-Host "$BuildType APK built successfully" -ForegroundColor Green
 
 # Step 4: Create tag for release builds
 if ($needsTag) {
-    Write-Host "Step 4: Updating 'latest' tag..." -ForegroundColor Yellow
+    Write-Host "Step 4: Creating tag $releaseTag..." -ForegroundColor Yellow
     
-    # Delete existing latest tag if it exists (both locally and remotely)
-    Write-Host "Moving 'latest' tag to current release..." -ForegroundColor Cyan
-    git tag -d latest 2>$null
-    git push origin --delete latest 2>$null
+    # Delete existing local tag if it exists (for republishing)
+    $existingTag = git tag -l $releaseTag
+    if ($existingTag) {
+        Write-Host "Deleting existing local tag $releaseTag..." -ForegroundColor Cyan
+        git tag -d $releaseTag
+    }
     
-    git tag -a latest -m "$Message"
+    git tag -a $releaseTag -m "$Message"
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "Error: Failed to create latest tag" -ForegroundColor Red
+        Write-Host "Error: Failed to create tag" -ForegroundColor Red
         exit 1
     }
     Write-Host "Tag $releaseTag created" -ForegroundColor Green
@@ -281,10 +283,10 @@ if ($LASTEXITCODE -ne 0) {
 
 # Push tag for release builds
 if ($needsTag) {
-    # For releases, force push the latest tag
-    git push origin latest --force
+    # For releases, force push the tag to allow republishing
+    git push origin $releaseTag --force
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "Error: Failed to push latest tag" -ForegroundColor Red
+        Write-Host "Error: Failed to push tag" -ForegroundColor Red
         exit 1
     }
 }

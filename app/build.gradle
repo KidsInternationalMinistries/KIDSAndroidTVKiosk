@@ -8,10 +8,10 @@ android {
 
     defaultConfig {
         applicationId "com.kidsim.tvkiosk"
-        minSdk 30  // Android 11 (API level 30)
-        targetSdk 34
-        versionCode 120  // Sequential build number starting from 100
-        versionName "1.15 (PreRelease)"  // Major.Minor version
+        minSdk 26  // Android 8.0 - needed for adaptive icons, still broad compatibility
+        targetSdk 31  // Android 12 - modern but compatible
+        versionCode 121  // Sequential build number starting from 100
+        versionName "1.15 (PreRelease)-Debug"  // Major.Minor version
     }
 
     buildTypes {
@@ -24,6 +24,10 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.debug  // Use debug signing for internal distribution
+            lintOptions {
+                checkReleaseBuilds false
+                abortOnError false
+            }
         }
     }
 

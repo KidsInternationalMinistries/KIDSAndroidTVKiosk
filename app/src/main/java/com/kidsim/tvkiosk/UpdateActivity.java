@@ -44,17 +44,15 @@ import org.json.JSONObject;
 public class UpdateActivity extends Activity {
     private static final String TAG = "UpdateActivity";
     
-    // GitHub API URLs to get release information by tag (avoids pagination issues)
-    private static final String GITHUB_TAG_RELEASE_BASE_URL = 
-        "https://api.github.com/repos/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/tags/";
-    private static final String GITHUB_DEBUG_TAG_URL = GITHUB_TAG_RELEASE_BASE_URL + "debug";
-    private static final String GITHUB_LATEST_TAG_URL = GITHUB_TAG_RELEASE_BASE_URL + "v1.7"; // Will be updated dynamically
+    // GitHub API URLs to get latest release information
+    private static final String GITHUB_LATEST_RELEASE_URL = 
+        "https://api.github.com/repos/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/latest";
+    private static final String GITHUB_PRERELEASE_URL = 
+        "https://api.github.com/repos/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/tags/prerelease";
     
-    // Fallback URLs in case API fails
-    private static final String FALLBACK_RELEASE_APK_URL = 
-        "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/download/v1.7/app-release.apk";
-    private static final String FALLBACK_DEBUG_APK_URL = 
-        "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/download/debug/app-debug.apk";
+    // Fallback URL in case API fails
+    private static final String FALLBACK_APK_URL = 
+        "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/latest/download/kids-kiosk.apk";
     
     private SharedPreferences preferences;
     private DeviceIdManager deviceIdManager;
@@ -69,6 +67,7 @@ public class UpdateActivity extends Activity {
     private TextView statusText;
     private TextView currentVersionText;
     private Button saveAndInstallButton;
+    private Button preReleaseButton;
     private Button kioskButton;
     private Button exitButton;
     
@@ -116,11 +115,13 @@ public class UpdateActivity extends Activity {
         statusText = findViewById(R.id.statusText);
         currentVersionText = findViewById(R.id.currentVersionText);
         saveAndInstallButton = findViewById(R.id.saveAndInstallButton);
+        preReleaseButton = findViewById(R.id.preReleaseButton);
         kioskButton = findViewById(R.id.kioskButton);
         exitButton = findViewById(R.id.exitButton);
         
-        // Start with update button disabled until all selections are made
+        // Start with update buttons disabled until all selections are made
         saveAndInstallButton.setEnabled(false);
+        preReleaseButton.setEnabled(false);
         
         // Set button text based on app type
         updateButtonText();
@@ -131,9 +132,9 @@ public class UpdateActivity extends Activity {
     
     private void updateButtonText() {
         if (isDebugApp()) {
-            saveAndInstallButton.setText("Update");
+            saveAndInstallButton.setText("Install Update");
         } else {
-            saveAndInstallButton.setText("Update");
+            saveAndInstallButton.setText("Install Update");
         }
     }
     
@@ -197,6 +198,7 @@ public class UpdateActivity extends Activity {
     
     private void setupEventHandlers() {
         saveAndInstallButton.setOnClickListener(v -> saveAndInstall());
+        preReleaseButton.setOnClickListener(v -> saveAndInstallPreRelease());
         kioskButton.setOnClickListener(v -> returnToKiosk());
         exitButton.setOnClickListener(v -> exitApp());
     }
@@ -275,6 +277,28 @@ public class UpdateActivity extends Activity {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 checkAllSelectionsValid();
+                
+                // Save orientation and device ID changes immediately
+                if (parent == orientationSpinner && orientationSpinner.getSelectedItem() != null) {
+                    String orientation = orientationSpinner.getSelectedItem().toString();
+                    SharedPreferences.Editor editor = preferences.edit();
+                    editor.putString("orientation", orientation);
+                    editor.apply();
+                    Log.i(TAG, "Auto-saved orientation: " + orientation);
+                }
+                
+                if (parent == deviceIdSpinner && deviceIdSpinner.getSelectedItem() != null) {
+                    String deviceId = deviceIdSpinner.getSelectedItem().toString();
+                    if (!deviceId.isEmpty()) {
+                        SharedPreferences.Editor editor = preferences.edit();
+                        editor.putString("deviceId", deviceId);
+                        editor.apply();
+                        
+                        // Also save device ID using DeviceIdManager
+                        deviceIdManager.setDeviceId(deviceId);
+                        Log.i(TAG, "Auto-saved device ID: " + deviceId);
+                    }
+                }
             }
             
             @Override
@@ -299,15 +323,47 @@ public class UpdateActivity extends Activity {
             !deviceIdSpinner.getSelectedItem().toString().isEmpty();
         
         saveAndInstallButton.setEnabled(hasValidSelections);
+        preReleaseButton.setEnabled(hasValidSelections);
         
         // Make sure the button visual state updates properly
         saveAndInstallButton.refreshDrawableState();
+        preReleaseButton.refreshDrawableState();
         
-        String appType = isDebugApp() ? "Debug" : "Release";
+        String appType = "Release"; // Unified app
         Log.d(TAG, "Button enabled: " + hasValidSelections + 
-               " (App Type: " + appType + " (auto)" +
+               " (App Type: " + appType + " (unified)" +
                ", Orientation: " + (orientationSpinner.getSelectedItem() != null ? orientationSpinner.getSelectedItem().toString() : "null") +
                ", DeviceId: " + (deviceIdSpinner.getSelectedItem() != null ? deviceIdSpinner.getSelectedItem().toString() : "null") + ")");
+    }
+    
+    private void saveAndInstallPreRelease() {
+        Log.i(TAG, "saveAndInstallPreRelease() called - PreRelease button clicked");
+        
+        // Get selected values
+        String orientation = orientationSpinner.getSelectedItem().toString();
+        String deviceId = deviceIdSpinner.getSelectedItem().toString();
+        
+        // App is unified - no separate debug/release builds
+        String buildType = "PreRelease";
+        
+        Log.i(TAG, "Selected values - BuildType: " + buildType + ", Orientation: " + orientation + ", DeviceId: " + deviceId);
+        
+        // Save preferences
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putString("buildType", buildType);
+        editor.putString("orientation", orientation);
+        editor.putString("deviceId", deviceId);
+        editor.apply();
+        
+        // Save device ID using DeviceIdManager if not blank
+        if (!deviceId.isEmpty()) {
+            deviceIdManager.setDeviceId(deviceId);
+        }
+        
+        Log.i(TAG, "Saved settings - Build: " + buildType + ", Orientation: " + orientation + ", Device: " + deviceId);
+        
+        // Start download and installation for prerelease
+        downloadAndInstallAPK(buildType);
     }
     
     private void saveAndInstall() {
@@ -317,10 +373,10 @@ public class UpdateActivity extends Activity {
         String orientation = orientationSpinner.getSelectedItem().toString();
         String deviceId = deviceIdSpinner.getSelectedItem().toString();
         
-        // App automatically knows its build type
-        String buildType = isDebugApp() ? "Debug" : "Release";
+        // App is now unified - no separate debug/release builds
+        String buildType = "Release";
         
-        Log.i(TAG, "Selected values - BuildType: " + buildType + " (auto-detected), Orientation: " + orientation + ", DeviceId: " + deviceId);
+        Log.i(TAG, "Selected values - BuildType: " + buildType + " (unified), Orientation: " + orientation + ", DeviceId: " + deviceId);
         
         // Save preferences
         SharedPreferences.Editor editor = preferences.edit();
@@ -365,9 +421,8 @@ public class UpdateActivity extends Activity {
                         statusText.setText("Found " + buildType.toLowerCase() + " release, starting download...");
                         startDownload(downloadUrl, buildType);
                     } else {
-                        Log.w(TAG, "Could not get " + buildType + " release URL, using fallback");
-                        String fallbackUrl = buildType.equals("Debug") ? FALLBACK_DEBUG_APK_URL : FALLBACK_RELEASE_APK_URL;
-                        startDownload(fallbackUrl, buildType);
+                        Log.w(TAG, "Could not get latest release URL, using fallback");
+                        startDownload(FALLBACK_APK_URL, buildType);
                     }
                 });
                 
@@ -375,8 +430,7 @@ public class UpdateActivity extends Activity {
                 Log.e(TAG, "Error getting " + buildType + " release URL", e);
                 runOnUiThread(() -> {
                     Log.w(TAG, "Using fallback URL due to error: " + e.getMessage());
-                    String fallbackUrl = buildType.equals("Debug") ? FALLBACK_DEBUG_APK_URL : FALLBACK_RELEASE_APK_URL;
-                    startDownload(fallbackUrl, buildType);
+                    startDownload(FALLBACK_APK_URL, buildType);
                 });
             }
         });
@@ -384,9 +438,15 @@ public class UpdateActivity extends Activity {
     
     private String getReleaseDownloadUrl(String buildType) {
         try {
-            // Use tag-based API to avoid pagination issues
-            String apiUrl = buildType.equals("Release") ? GITHUB_LATEST_TAG_URL : GITHUB_DEBUG_TAG_URL;
-            Log.i(TAG, "Fetching " + buildType + " release by tag from GitHub API: " + apiUrl);
+            // Choose API URL based on build type
+            String apiUrl;
+            if ("PreRelease".equals(buildType)) {
+                apiUrl = GITHUB_PRERELEASE_URL;
+                Log.i(TAG, "Fetching prerelease from GitHub API: " + apiUrl);
+            } else {
+                apiUrl = GITHUB_LATEST_RELEASE_URL;
+                Log.i(TAG, "Fetching latest release from GitHub API: " + apiUrl);
+            }
             
             URL url = new URL(apiUrl);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -412,12 +472,12 @@ public class UpdateActivity extends Activity {
                 return parseReleaseForApk(new JSONObject(response.toString()), buildType);
                 
             } else {
-                Log.e(TAG, "GitHub API request failed with code: " + responseCode);
+                Log.e(TAG, "GitHub API request failed with code: " + responseCode + " for " + buildType);
                 return null;
             }
             
         } catch (Exception e) {
-            Log.e(TAG, "Error fetching " + buildType + " release by tag", e);
+            Log.e(TAG, "Error fetching " + buildType + " release", e);
             return null;
         }
     }
@@ -429,40 +489,17 @@ public class UpdateActivity extends Activity {
             
             // Look for APK asset in the assets array
             JSONArray assets = releaseData.getJSONArray("assets");
-            String fallbackApkUrl = null;
             
             for (int i = 0; i < assets.length(); i++) {
                 JSONObject asset = assets.getJSONObject(i);
                 String assetName = asset.getString("name");
                 
-                // For Release builds, prefer app-release.apk, otherwise any APK
+                // Look for any APK file
                 if (assetName.toLowerCase().endsWith(".apk")) {
                     String downloadUrl = asset.getString("browser_download_url");
-                    
-                    if (buildType.equals("Release")) {
-                        // Prefer release APKs for release builds
-                        if (assetName.toLowerCase().contains("release") || 
-                            (!assetName.toLowerCase().contains("debug"))) {
-                            Log.i(TAG, "Found " + buildType + " APK asset: " + assetName + " -> " + downloadUrl);
-                            return downloadUrl;
-                        }
-                        // Keep any APK as fallback for Release builds
-                        if (fallbackApkUrl == null) {
-                            fallbackApkUrl = downloadUrl;
-                            Log.d(TAG, "Keeping fallback APK for " + buildType + ": " + assetName);
-                        }
-                    } else {
-                        // For non-release builds, take first APK found
-                        Log.i(TAG, "Found " + buildType + " APK asset: " + assetName + " -> " + downloadUrl);
-                        return downloadUrl;
-                    }
+                    Log.i(TAG, "Found " + buildType + " APK asset: " + assetName + " -> " + downloadUrl);
+                    return downloadUrl;
                 }
-            }
-            
-            // If Release build and no preferred APK found, use fallback
-            if (buildType.equals("Release") && fallbackApkUrl != null) {
-                Log.i(TAG, "Using fallback APK for " + buildType + ": " + fallbackApkUrl);
-                return fallbackApkUrl;
             }
             
             Log.w(TAG, "No suitable APK assets found in " + buildType + " release");
@@ -473,77 +510,6 @@ public class UpdateActivity extends Activity {
             return null;
         }
     }
-    
-    private String findDebugReleaseApk(JSONArray releases) {
-        try {
-            // Look through releases to find the latest debug/pre-release
-            for (int i = 0; i < releases.length(); i++) {
-                JSONObject release = releases.getJSONObject(i);
-                String tagName = release.getString("tag_name");
-                boolean isPrerelease = release.optBoolean("prerelease", false);
-                boolean isDraft = release.optBoolean("draft", false);
-                
-                // Skip drafts
-                if (isDraft) {
-                    continue;
-                }
-                
-                // Look for debug releases (pre-releases or tags containing "debug")
-                if (isPrerelease || tagName.toLowerCase().contains("debug")) {
-                    Log.i(TAG, "Found debug release candidate: " + tagName + " (prerelease: " + isPrerelease + ")");
-                    
-                    JSONArray assets = release.getJSONArray("assets");
-                    for (int j = 0; j < assets.length(); j++) {
-                        JSONObject asset = assets.getJSONObject(j);
-                        String assetName = asset.getString("name");
-                        
-                        // Look for debug APKs first, then any APK
-                        if (assetName.toLowerCase().endsWith(".apk")) {
-                            if (assetName.toLowerCase().contains("debug") || 
-                                assetName.toLowerCase().contains("test") ||
-                                !assetName.toLowerCase().contains("release")) {
-                                String downloadUrl = asset.getString("browser_download_url");
-                                Log.i(TAG, "Found Debug APK asset: " + assetName + " -> " + downloadUrl);
-                                return downloadUrl;
-                            }
-                        }
-                    }
-                }
-            }
-            
-            Log.w(TAG, "No debug releases found, trying any recent release with debug APK");
-            
-            // Fallback: look for any recent release that has a debug APK
-            for (int i = 0; i < Math.min(5, releases.length()); i++) {
-                JSONObject release = releases.getJSONObject(i);
-                String tagName = release.getString("tag_name");
-                boolean isDraft = release.optBoolean("draft", false);
-                
-                if (isDraft) continue;
-                
-                JSONArray assets = release.getJSONArray("assets");
-                for (int j = 0; j < assets.length(); j++) {
-                    JSONObject asset = assets.getJSONObject(j);
-                    String assetName = asset.getString("name");
-                    
-                    if (assetName.toLowerCase().endsWith(".apk") && 
-                        (assetName.toLowerCase().contains("debug") || assetName.toLowerCase().contains("test"))) {
-                        String downloadUrl = asset.getString("browser_download_url");
-                        Log.i(TAG, "Found Debug APK in release " + tagName + ": " + assetName + " -> " + downloadUrl);
-                        return downloadUrl;
-                    }
-                }
-            }
-            
-            Log.w(TAG, "No debug APK found in recent releases");
-            return null;
-            
-        } catch (Exception e) {
-            Log.e(TAG, "Error finding debug release", e);
-            return null;
-        }
-    }
-
     private void downloadAPKDirectly(String apkUrl, String buildType) {
         try {
             // Use app's external files directory
@@ -953,7 +919,7 @@ public class UpdateActivity extends Activity {
                     Intent installIntent = new Intent(Intent.ACTION_INSTALL_PACKAGE);
                     Uri apkUri = androidx.core.content.FileProvider.getUriForFile(
                         this, 
-                        getFileProviderAuthority(), 
+                        "com.kidsim.tvkiosk.fileprovider", 
                         publicApk
                     );
                     installIntent.setData(apkUri);
@@ -1092,23 +1058,11 @@ public class UpdateActivity extends Activity {
     }
     
     /**
-     * Get the correct FileProvider authority based on the build type
-     */
-    private String getFileProviderAuthority() {
-        // Check if this is a debug build by looking at the package name
-        String packageName = getPackageName();
-        if (packageName.endsWith(".debug")) {
-            return "com.kidsim.tvkiosk.debug.fileprovider";
-        } else {
-            return "com.kidsim.tvkiosk.fileprovider";
-        }
-    }
-    
-    /**
-     * Check if this is the debug app (separate package)
+     * Check if this is the debug app (no longer used - simplified workflow)
      */
     private boolean isDebugApp() {
-        return getPackageName().endsWith(".debug");
+        // Always return false - unified app, no separate debug package
+        return false;
     }
     
     /**
@@ -1177,7 +1131,7 @@ public class UpdateActivity extends Activity {
                 orientationSpinner.getSelectedItem().toString() : "Landscape";
             String deviceId = deviceIdSpinner.getSelectedItem() != null ? 
                 deviceIdSpinner.getSelectedItem().toString() : "";
-            String buildType = isDebugApp() ? "Debug" : "Release";
+            String buildType = "Release"; // Unified app
             
             // Save preferences
             SharedPreferences.Editor editor = preferences.edit();
