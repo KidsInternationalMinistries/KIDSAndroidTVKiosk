@@ -10,8 +10,8 @@ android {
         applicationId "com.kidsim.tvkiosk"
         minSdk 26  // Android 8.0 - needed for adaptive icons, still broad compatibility
         targetSdk 31  // Android 12 - modern but compatible
-        versionCode 124  // Sequential build number starting from 100
-        versionName "v1.15 (PreRelease)-build123 (PreRelease)-Debug"  // Format matching promotion script pattern 2
+        versionCode 125  // Sequential build number starting from 100
+        versionName "v1.15 (PreRelease)-build123 (PreRelease)-Debug (PreRelease)"  // Format matching promotion script pattern 2
     }
 
     buildTypes {
