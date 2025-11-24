@@ -284,6 +284,9 @@ public class UpdateActivity extends Activity {
                     SharedPreferences.Editor editor = preferences.edit();
                     editor.putString("orientation", orientation);
                     editor.apply();
+                    
+                    // Also save orientation using DeviceIdManager
+                    deviceIdManager.setOrientation(orientation);
                     Log.i(TAG, "Auto-saved orientation: " + orientation);
                 }
                 

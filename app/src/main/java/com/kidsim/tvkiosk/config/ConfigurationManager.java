@@ -147,6 +147,9 @@ public class ConfigurationManager {
                 @Override
                 public void onConfigLoaded(DeviceConfig config) {
                     try {
+                        // Apply local preferences to the loaded configuration
+                        DeviceConfig finalConfig = getConfigForThisDevice(config);
+                        
                         // Save the base config and successful load time
                         prefs.edit()
                             .putString(KEY_CONFIG_JSON, baseConfig.toString())
@@ -154,7 +157,7 @@ public class ConfigurationManager {
                             .apply();
                         
                         if (listener != null) {
-                            listener.onConfigUpdated(config);
+                            listener.onConfigUpdated(finalConfig);
                         }
                         
                         Log.i(TAG, "Google Sheets configuration loaded successfully for device: " + deviceId);
@@ -190,11 +193,14 @@ public class ConfigurationManager {
             }
             config.setDeviceName(deviceName);
             
+            // Apply local preferences to fallback config as well
+            DeviceConfig finalConfig = getConfigForThisDevice(config);
+            
             if (listener != null) {
-                listener.onConfigUpdated(config);
+                listener.onConfigUpdated(finalConfig);
             }
             
-            Log.i(TAG, "Using fallback configuration");
+            Log.i(TAG, "Using fallback configuration with local preferences applied");
         } catch (Exception e) {
             Log.e(TAG, "Failed to load fallback config", e);
             if (listener != null) {
@@ -303,8 +309,23 @@ public class ConfigurationManager {
     }
     
     private DeviceConfig getConfigForThisDevice(DeviceConfig globalConfig) {
-        // For now, just return the config as-is
-        // In the future, this could filter based on device capabilities, etc.
+        // Apply locally stored preferences to override global config
+        
+        // Override orientation with locally stored preference
+        String localOrientation = deviceIdManager.getOrientation();
+        if (localOrientation != null && !localOrientation.isEmpty()) {
+            globalConfig.setOrientation(localOrientation);
+            Log.d(TAG, "Applied local orientation preference: " + localOrientation);
+        }
+        
+        // Override device ID with locally stored preference
+        String localDeviceId = deviceIdManager.getDeviceId();
+        if (localDeviceId != null && !localDeviceId.isEmpty()) {
+            globalConfig.setDeviceId(localDeviceId);
+            globalConfig.setDeviceName(localDeviceId + " Device");
+            Log.d(TAG, "Applied local device ID preference: " + localDeviceId);
+        }
+        
         return globalConfig;
     }
     
