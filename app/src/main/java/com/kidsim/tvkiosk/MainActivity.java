@@ -715,6 +715,13 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         pageLoadStates = new boolean[pageCount];
         backupPageLoadStates = new boolean[pageCount];
         
+        // Get current orientation setting
+        String currentOrientation = "landscape"; // default
+        if (currentConfig != null && currentConfig.getOrientation() != null) {
+            currentOrientation = currentConfig.getOrientation();
+        }
+        boolean isPortraitMode = "portrait".equalsIgnoreCase(currentOrientation);
+        
         // Create WebViews dynamically
         for (int i = 0; i < pageCount; i++) {
             try {
@@ -722,8 +729,17 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
                 webViews[i] = new WebView(this);
                 webViews[i].setId(View.generateViewId());
                 
-                // Apply 90-degree rotation and swap width/height
-                applyWebViewRotation(webViews[i], deviceWidth, deviceHeight);
+                // Only apply rotation in portrait mode to display landscape content
+                if (isPortraitMode) {
+                    applyWebViewRotation(webViews[i], deviceWidth, deviceHeight);
+                } else {
+                    // Landscape mode - normal layout
+                    FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        FrameLayout.LayoutParams.MATCH_PARENT
+                    );
+                    webViews[i].setLayoutParams(layoutParams);
+                }
                 
                 webViews[i].setBackgroundColor(0xFF000000); // Black background
                 webViews[i].setVisibility(View.GONE);
@@ -733,8 +749,17 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
                 backupWebViews[i] = new WebView(this);
                 backupWebViews[i].setId(View.generateViewId());
                 
-                // Apply 90-degree rotation and swap width/height
-                applyWebViewRotation(backupWebViews[i], deviceWidth, deviceHeight);
+                // Only apply rotation in portrait mode to display landscape content
+                if (isPortraitMode) {
+                    applyWebViewRotation(backupWebViews[i], deviceWidth, deviceHeight);
+                } else {
+                    // Landscape mode - normal layout
+                    FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        FrameLayout.LayoutParams.MATCH_PARENT
+                    );
+                    backupWebViews[i].setLayoutParams(layoutParams);
+                }
                 
                 backupWebViews[i].setBackgroundColor(0xFF000000); // Black background
                 backupWebViews[i].setVisibility(View.GONE);
@@ -760,7 +785,8 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     }
     
     private void applyWebViewRotation(WebView webView, int deviceWidth, int deviceHeight) {
-        // Rotate the WebView by 90 degrees
+        // Rotate the WebView by 90 degrees for portrait mode
+        // This allows landscape web content to display properly in portrait orientation
         webView.setRotation(90f);
         
         // Swap width and height for the rotated view
@@ -780,7 +806,7 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         webView.setPivotX(deviceHeight / 2f);
         webView.setPivotY(deviceWidth / 2f);
         
-        Log.d(TAG, "Applied 90° rotation to WebView: " + deviceWidth + "x" + deviceHeight + " -> " + deviceHeight + "x" + deviceWidth);
+        Log.d(TAG, "Applied 90° rotation for portrait mode: " + deviceWidth + "x" + deviceHeight + " -> " + deviceHeight + "x" + deviceWidth);
     }
     
     private void applyOrientation(String orientation) {
@@ -790,8 +816,9 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
             orientationValue = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT;
         }
         
+        // Force orientation and disable sensor-based auto-rotation
         setRequestedOrientation(orientationValue);
-        Log.d(TAG, "Set forced orientation to: " + orientation);
+        Log.d(TAG, "Set forced orientation to: " + orientation + " (sensors ignored)");
     }
     
     private void stopPageRotation() {
