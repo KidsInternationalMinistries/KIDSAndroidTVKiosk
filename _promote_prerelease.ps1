@@ -59,9 +59,9 @@ try {
     Write-Host "Found prerelease: $prereleaseTitle (tag: prerelease)" -ForegroundColor Yellow
     
     # Extract version from title and create clean production tag
-    # Expected format from new script: "v1.8 (PreRelease)-build107"
+    # Expected format from new script: "v2.0 (PreRelease)-build127"
     if ($prereleaseTitle -match '^v(\d+\.\d+)\s+\(PreRelease\)-build(\d+)$') {
-        # Clean format: "v1.8 (PreRelease)-build107"
+        # Clean format: "v2.0 (PreRelease)-build127"
         $versionBase = $matches[1]
         $buildNumber = $matches[2]
         $newTagName = "v$versionBase-build$buildNumber"
@@ -130,7 +130,15 @@ try {
     $buildGradlePath = "app\build.gradle"
     if (Test-Path $buildGradlePath) {
         $buildGradleContent = Get-Content $buildGradlePath
-        $cleanVersionName = $newTagName -replace '^v(\d+\.\d+)-build\d+$', '$1'
+        
+        # Extract version from the stable tag we just created (e.g., "v2.0-build127" -> "2.0")
+        if ($newTagName -match '^v(\d+\.\d+)-build\d+$') {
+            $cleanVersionName = $matches[1]
+        } else {
+            Write-Host "Warning: Could not extract clean version from $newTagName" -ForegroundColor Yellow
+            $cleanVersionName = "2.0"  # Fallback
+        }
+        
         $updatedContent = $buildGradleContent -replace 'versionName\s+"[^"]*\s+\(PreRelease\)"', "versionName ""$cleanVersionName"""
         $updatedContent | Set-Content $buildGradlePath
         
@@ -197,12 +205,20 @@ try {
         $nextVersionCode = $currentVersionCode + 1
         
         # Bump the minor version for the next prerelease
-        if ($currentVersionName -match '^(\d+)\.(\d+)$') {
+        if ($currentVersionName -match '^(\d+)\.(\d+)\s+\(PreRelease\)$') {
+            # Parse format like "2.0 (PreRelease)"
             $majorVersion = [int]$matches[1]
             $minorVersion = [int]$matches[2]
             $newMinorVersion = $minorVersion + 1
             $nextVersionName = "$majorVersion.$newMinorVersion"
-            Write-Host "Bumping version from $currentVersionName to $nextVersionName" -ForegroundColor Cyan
+            Write-Host "Bumping version from $majorVersion.$minorVersion to $nextVersionName" -ForegroundColor Cyan
+        } elseif ($currentVersionName -match '^(\d+)\.(\d+)$') {
+            # Parse clean format like "2.0"
+            $majorVersion = [int]$matches[1]
+            $minorVersion = [int]$matches[2]
+            $newMinorVersion = $minorVersion + 1
+            $nextVersionName = "$majorVersion.$newMinorVersion"
+            Write-Host "Bumping version from $majorVersion.$minorVersion to $nextVersionName" -ForegroundColor Cyan
         } else {
             Write-Host "Warning: Could not parse version format '$currentVersionName', using as-is" -ForegroundColor Yellow
             $nextVersionName = $currentVersionName

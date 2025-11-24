@@ -96,8 +96,8 @@ $buildTask = "assembleRelease"
 $apkPath = "app/build/outputs/apk/release/app-release.apk"
 $releaseTag = "prerelease"
 
-# Create clean version format for release title (e.g., "v1.16 (PreRelease)-build125")
-if ($baseVersionName -match '^v(\d+\.\d+)\s+\(PreRelease\)$') {
+# Create clean version format for release title (e.g., "v2.0 (PreRelease)-build127")
+if ($baseVersionName -match '^(\d+\.\d+)\s+\(PreRelease\)$') {
     $cleanVersion = $matches[1]
     $releaseTitle = "v$cleanVersion (PreRelease)-build$newVersionCode"
 } else {
