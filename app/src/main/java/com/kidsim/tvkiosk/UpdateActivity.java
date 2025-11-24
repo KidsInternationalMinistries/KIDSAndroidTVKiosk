@@ -186,8 +186,17 @@ public class UpdateActivity extends Activity {
     private void loadSavedPreferences() {
         // Build type is now automatic based on app type, so only load orientation
         
-        // Load saved orientation (default: Landscape)
-        String savedOrientation = preferences.getString("orientation", "Landscape");
+        // Load saved orientation using DeviceIdManager (default: Landscape)
+        String savedOrientation = deviceIdManager.getOrientation();
+        // Capitalize first letter for spinner display
+        if ("landscape".equalsIgnoreCase(savedOrientation)) {
+            savedOrientation = "Landscape";
+        } else if ("portrait".equalsIgnoreCase(savedOrientation)) {
+            savedOrientation = "Portrait";
+        } else {
+            savedOrientation = "Landscape"; // fallback
+        }
+        
         for (int i = 0; i < orientationSpinner.getCount(); i++) {
             if (orientationSpinner.getItemAtPosition(i).toString().equals(savedOrientation)) {
                 orientationSpinner.setSelection(i);
@@ -281,11 +290,6 @@ public class UpdateActivity extends Activity {
                 // Save orientation and device ID changes immediately
                 if (parent == orientationSpinner && orientationSpinner.getSelectedItem() != null) {
                     String orientation = orientationSpinner.getSelectedItem().toString();
-                    SharedPreferences.Editor editor = preferences.edit();
-                    editor.putString("orientation", orientation);
-                    editor.apply();
-                    
-                    // Also save orientation using DeviceIdManager
                     deviceIdManager.setOrientation(orientation);
                     Log.i(TAG, "Auto-saved orientation: " + orientation);
                 }
@@ -354,9 +358,11 @@ public class UpdateActivity extends Activity {
         // Save preferences
         SharedPreferences.Editor editor = preferences.edit();
         editor.putString("buildType", buildType);
-        editor.putString("orientation", orientation);
         editor.putString("deviceId", deviceId);
         editor.apply();
+        
+        // Save orientation using DeviceIdManager
+        deviceIdManager.setOrientation(orientation);
         
         // Save device ID using DeviceIdManager if not blank
         if (!deviceId.isEmpty()) {
@@ -384,9 +390,11 @@ public class UpdateActivity extends Activity {
         // Save preferences
         SharedPreferences.Editor editor = preferences.edit();
         editor.putString("buildType", buildType);
-        editor.putString("orientation", orientation);
         editor.putString("deviceId", deviceId);
         editor.apply();
+        
+        // Save orientation using DeviceIdManager
+        deviceIdManager.setOrientation(orientation);
         
         // Save device ID using DeviceIdManager if not blank
         if (!deviceId.isEmpty()) {
@@ -1139,9 +1147,11 @@ public class UpdateActivity extends Activity {
             // Save preferences
             SharedPreferences.Editor editor = preferences.edit();
             editor.putString("buildType", buildType);
-            editor.putString("orientation", orientation);
             editor.putString("deviceId", deviceId);
             editor.apply();
+            
+            // Save orientation using DeviceIdManager
+            deviceIdManager.setOrientation(orientation);
             
             // Save device ID using DeviceIdManager if not blank
             if (!deviceId.isEmpty()) {

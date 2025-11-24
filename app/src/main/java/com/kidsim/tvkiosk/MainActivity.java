@@ -652,8 +652,10 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     private void applyConfiguration(DeviceConfig config) {
         Log.i(TAG, "Applying configuration for device: " + config.getDeviceName());
         
-        // Apply orientation
-        applyOrientation(config.getOrientation());
+        // Apply orientation from local device settings (not from spreadsheet)
+        String localOrientation = deviceIdManager.getOrientation();
+        applyOrientation(localOrientation);
+        Log.i(TAG, "Using local orientation setting: " + localOrientation);
         
         // Setup pages
         pages = config.getPages();
@@ -715,12 +717,10 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         pageLoadStates = new boolean[pageCount];
         backupPageLoadStates = new boolean[pageCount];
         
-        // Get current orientation setting
-        String currentOrientation = "landscape"; // default
-        if (currentConfig != null && currentConfig.getOrientation() != null) {
-            currentOrientation = currentConfig.getOrientation();
-        }
+        // Get current orientation setting from local device preferences
+        String currentOrientation = deviceIdManager.getOrientation();
         boolean isPortraitMode = "portrait".equalsIgnoreCase(currentOrientation);
+        Log.i(TAG, "Setting up WebViews for orientation: " + currentOrientation);
         
         // Create WebViews dynamically
         for (int i = 0; i < pageCount; i++) {
