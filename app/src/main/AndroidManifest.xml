@@ -40,8 +40,7 @@
             </intent-filter>
             
             <!-- Intent filter for AutoStart/Home launcher functionality -->
-            <!-- Initially disabled to prevent installation conflicts -->
-            <intent-filter android:priority="1" android:enabled="false">
+            <intent-filter android:priority="1">
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.HOME" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -53,7 +52,7 @@
             android:exported="false"
             android:screenOrientation="sensor"
             android:launchMode="singleTask"
-            android:label="Kiosk Configuration"
+            android:label="Kiosk Update"
 
             android:theme="@style/UpdateActivityTheme">
         </activity>
