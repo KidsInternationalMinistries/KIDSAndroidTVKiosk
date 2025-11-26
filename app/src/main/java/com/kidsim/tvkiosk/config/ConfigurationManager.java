@@ -274,8 +274,7 @@ public class ConfigurationManager {
         config.setDeviceName(json.optString("deviceName", "Android TV"));
         config.setOrientation(json.optString("orientation", "landscape"));
         config.setRefreshIntervalMinutes(json.optInt("refreshIntervalMinutes", 60));
-        config.setAutoStart(json.optBoolean("autoStart", true));
-        config.setClearCache(json.optBoolean("clearCache", false));
+        // autoStart and clearCache fields removed - not used in simplified kiosk
         config.setConfigVersion(json.optString("configVersion", "1.0"));
         
         // Parse pages
@@ -287,7 +286,7 @@ public class ConfigurationManager {
                 PageConfig page = new PageConfig();
                 page.setUrl(pageJson.getString("url"));
                 page.setDisplayTimeSeconds(pageJson.optInt("displayTimeSeconds", 300));
-                page.setTitle(pageJson.optString("title", ""));
+                // Title field removed - not used in kiosk display
                 pages.add(page);
             }
         } else if (json.has("url")) {

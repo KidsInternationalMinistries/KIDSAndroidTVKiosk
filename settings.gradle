@@ -15,4 +15,3 @@ dependencyResolutionManagement {
 
 rootProject.name = "KIDSAndroidTVKiosk"
 include ':app'
-include ':updater'

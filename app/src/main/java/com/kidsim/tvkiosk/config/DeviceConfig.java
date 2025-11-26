@@ -8,16 +8,12 @@ public class DeviceConfig {
     private String orientation; // "landscape" or "portrait"
     private int refreshIntervalMinutes;
     private List<PageConfig> pages;
-    private boolean autoStart;
-    private boolean clearCache;
     private String configVersion;
     
     // Default constructor
     public DeviceConfig() {
         this.orientation = "landscape";
         this.refreshIntervalMinutes = 60;
-        this.autoStart = true;
-        this.clearCache = false;
         this.configVersion = "1.0";
     }
     
@@ -38,12 +34,6 @@ public class DeviceConfig {
     
     public List<PageConfig> getPages() { return pages; }
     public void setPages(List<PageConfig> pages) { this.pages = pages; }
-    
-    public boolean isAutoStart() { return autoStart; }
-    public void setAutoStart(boolean autoStart) { this.autoStart = autoStart; }
-    
-    public boolean isClearCache() { return clearCache; }
-    public void setClearCache(boolean clearCache) { this.clearCache = clearCache; }
     
     public String getConfigVersion() { return configVersion; }
     public void setConfigVersion(String configVersion) { this.configVersion = configVersion; }

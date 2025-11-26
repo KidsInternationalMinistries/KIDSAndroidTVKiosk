@@ -2,11 +2,8 @@ package com.kidsim.tvkiosk;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -87,8 +84,7 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     private long lastBackPressTime = 0;
     private static final long DOUBLE_BACK_PRESS_INTERVAL = 2000; // 2 seconds
     
-    // Connectivity
-    private boolean isNetworkAvailable = true;
+    // Connectivity removed - using cache-first strategy consistently
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -171,15 +167,9 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     }
     
     private void updateWebViewCacheMode(WebSettings webSettings) {
-        if (isNetworkConnected()) {
-            // Network available - use cache but allow fresh loads
-            webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
-            Log.d(TAG, "Network available: Using LOAD_DEFAULT cache mode");
-        } else {
-            // Network unavailable - prefer cache
-            webSettings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
-            Log.d(TAG, "Network unavailable: Using LOAD_CACHE_ELSE_NETWORK cache mode");
-        }
+        // Use cache-first strategy for optimal performance
+        webSettings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+        Log.d(TAG, "Using LOAD_CACHE_ELSE_NETWORK cache mode for optimal performance");
     }
     
     private void markPageLoaded(WebView webView) {
@@ -343,36 +333,7 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     
 
 
-    
-    private boolean isNetworkConnected() {
-        try {
-            ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
-            if (connectivityManager == null) {
-                return false;
-            }
-            
-            NetworkInfo activeNetwork = connectivityManager.getActiveNetworkInfo();
-            boolean connected = activeNetwork != null && activeNetwork.isConnectedOrConnecting();
-            
-            if (connected != isNetworkAvailable) {
-                isNetworkAvailable = connected;
-                Log.i(TAG, "Network connectivity changed: " + (connected ? "CONNECTED" : "DISCONNECTED"));
-                
-                if (connected) {
-                    // Network restored
-                    Log.i(TAG, "Network restored, will attempt fresh content loading");
-                } else {
-                    Log.w(TAG, "Network lost, will use cached content");
-                }
-            }
-            
-            return connected;
-        } catch (Exception e) {
-            Log.e(TAG, "Error checking network connectivity", e);
-            return false;
-        }
-    }
-    
+
 
     
     private void setupErrorHandling() {
@@ -423,8 +384,7 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         Log.i(TAG, "Setting up " + pageCount + " pages");
         setupDynamicWebViews(pageCount);
         
-        // Check network connectivity and update cache modes for all WebViews
-        isNetworkConnected();
+        // Setup cache modes for all WebViews (cache-first strategy)
         for (int i = 0; i < pageCount; i++) {
             if (webViews[i] != null) {
                 updateWebViewCacheMode(webViews[i].getSettings());
@@ -434,8 +394,7 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         // Load pages into WebViews
         loadPagesIntoWebViews();
         
-        Log.i(TAG, "Configuration applied with " + pages.size() + " pages, network: " + 
-              (isNetworkAvailable ? "CONNECTED" : "OFFLINE"));
+        Log.i(TAG, "Configuration applied with " + pages.size() + " pages");
     }
     
     /**

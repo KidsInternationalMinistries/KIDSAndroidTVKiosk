@@ -3,7 +3,6 @@ package com.kidsim.tvkiosk.config;
 public class PageConfig {
     private String url;
     private int displayTimeSeconds;
-    private String title;
     
     // Default constructor
     public PageConfig() {
@@ -30,7 +29,4 @@ public class PageConfig {
     public void setDisplayTimeSeconds(int displayTimeSeconds) { 
         this.displayTimeSeconds = displayTimeSeconds; 
     }
-    
-    public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
 }

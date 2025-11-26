@@ -12,6 +12,7 @@ import android.content.Intent;
 import com.kidsim.tvkiosk.config.ConfigurationManager;
 import com.kidsim.tvkiosk.config.DeviceIdManager;
 import com.kidsim.tvkiosk.config.GoogleSheetsConfigLoader;
+import com.kidsim.tvkiosk.service.WatchdogService;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
@@ -20,10 +21,6 @@ import java.util.concurrent.Executors;
 public class UpdateActivity extends Activity {
     
     private static final String TAG = "UpdateActivity";
-    private static final String GITHUB_LATEST_RELEASE_URL = 
-        "https://api.github.com/repos/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/latest";
-    private static final String FALLBACK_APK_URL = 
-        "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/latest/download/app-release.apk";
     
     // UI components
     private TextView statusText;
@@ -283,14 +280,6 @@ public class UpdateActivity extends Activity {
     }
     
     /**
-     * Check if this is the debug app (no longer used - simplified workflow)
-     */
-    private boolean isDebugApp() {
-        // Always return false - unified app, no separate debug package
-        return false;
-    }
-    
-    /**
      * Return to kiosk by closing this activity and going back to MainActivity
      */
     private void returnToKiosk() {
@@ -339,9 +328,25 @@ public class UpdateActivity extends Activity {
             executor.shutdown();
         }
         
-        // Exit the entire app
+        // Stop any services that might restart the app
+        try {
+            Intent serviceIntent = new Intent(this, WatchdogService.class);
+            stopService(serviceIntent);
+        } catch (Exception e) {
+            Log.w(TAG, "Could not stop WatchdogService: " + e.getMessage());
+        }
+        
+        // Clear all activities from task and exit completely
+        Intent intent = new Intent(Intent.ACTION_MAIN);
+        intent.addCategory(Intent.CATEGORY_HOME);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
+        
+        // Finish this activity and remove from task
         finishAndRemoveTask();
-        System.exit(0);
+        
+        // Force terminate the process
+        android.os.Process.killProcess(android.os.Process.myPid());
     }
     
     /**

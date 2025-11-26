@@ -311,7 +311,7 @@ public class GoogleSheetsConfigLoader {
                     }
                     
                     PageConfig pageConfig = new PageConfig(pageUrl, displayTime);
-                    pageConfig.setTitle("Page " + (pages.size() + 1));
+                    // Title field removed - not needed for kiosk display
                     pages.add(pageConfig);
                     
                     Log.d(TAG, "Added page: " + pageUrl + " (display: " + displayTime + "s)");
@@ -331,8 +331,7 @@ public class GoogleSheetsConfigLoader {
             config.setDeviceName(deviceName);
             config.setOrientation("landscape"); // Default orientation, will be overridden by stored preference
             config.setRefreshIntervalMinutes(refreshInterval);
-            config.setAutoStart(true);
-            config.setClearCache(true);
+            // autoStart and clearCache fields removed - not used in simplified kiosk
             config.setPages(pages);
             
             return config;
