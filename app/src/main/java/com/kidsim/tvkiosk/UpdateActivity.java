@@ -326,16 +326,22 @@ public class UpdateActivity extends Activity {
     }
     
     /**
-     * Close the configuration activity
+     * Exit the entire application
      */
     private void exitApp() {
-        Log.i(TAG, "Exiting configuration screen");
+        Log.i(TAG, "Exiting application completely");
         
         // Save any pending settings first
         saveCurrentSettings();
         
-        // Finish this activity
-        finish();
+        // Close executor
+        if (executor != null && !executor.isShutdown()) {
+            executor.shutdown();
+        }
+        
+        // Exit the entire app
+        finishAndRemoveTask();
+        System.exit(0);
     }
     
     /**
