@@ -596,32 +596,16 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
                 container.setId(View.generateViewId());
                 container.setBackgroundColor(0xFF000000); // Black background
                 
-                // Create WebView for this page - use custom non-scrollable WebView
+                // Create WebView for this page - lightweight version
                 webViews[i] = new WebView(this) {
                     @Override
                     public void scrollTo(int x, int y) {
-                        super.scrollTo(0, 0); // Force all scrollTo calls to go to top
+                        super.scrollTo(0, 0); // Keep scroll-to-top override
                     }
                     
                     @Override
                     public void scrollBy(int x, int y) {
-                        // Do nothing - completely disable scrollBy
-                    }
-                    
-                    @Override
-                    public boolean onTouchEvent(android.view.MotionEvent event) {
-                        // Disable touch scrolling but allow clicks
-                        if (event.getAction() == android.view.MotionEvent.ACTION_MOVE) {
-                            return true; // Consume move events to prevent scrolling
-                        }
-                        return super.onTouchEvent(event);
-                    }
-                    
-                    @Override
-                    public boolean overScrollBy(int deltaX, int deltaY, int scrollX, int scrollY,
-                                              int scrollRangeX, int scrollRangeY, int maxOverScrollX,
-                                              int maxOverScrollY, boolean isTouchEvent) {
-                        return false; // Disable overscroll
+                        // Do nothing - disable scrollBy
                     }
                 };
                 webViews[i].setId(View.generateViewId());
@@ -667,29 +651,31 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         // Enable JavaScript
         webSettings.setJavaScriptEnabled(true);
         
-        // Basic settings only
+        // Performance optimizations
         webSettings.setDomStorageEnabled(true);
+        webSettings.setDatabaseEnabled(true);
+        webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
         
-        // Disable zoom and scaling that could cause scrolling
+        // Enable hardware acceleration
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        
+        // Re-enable important performance settings
+        webSettings.setUseWideViewPort(true);
+        webSettings.setLoadWithOverviewMode(true);
+        
+        // Disable zoom but keep performance settings
         webSettings.setSupportZoom(false);
         webSettings.setBuiltInZoomControls(false);
         webSettings.setDisplayZoomControls(false);
-        webSettings.setUseWideViewPort(false); // Disabled to prevent scaling issues
-        webSettings.setLoadWithOverviewMode(false); // Disabled to prevent scaling issues
         
-        // Disable focus and scrolling behaviors
+        // Minimal scroll prevention (much lighter than before)
         webView.setFocusable(false);
         webView.setFocusableInTouchMode(false);
-        webView.clearFocus();
-        webView.setScrollbarFadingEnabled(false);
+        webView.setOverScrollMode(WebView.OVER_SCROLL_NEVER);
         webView.setVerticalScrollBarEnabled(false);
         webView.setHorizontalScrollBarEnabled(false);
         
-        // Additional aggressive scroll prevention
-        webView.setOverScrollMode(WebView.OVER_SCROLL_NEVER);
-        webView.setScrollContainer(false);
-        
-        // Simple WebView client with scroll prevention
+        // Lightweight WebView client
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
@@ -700,54 +686,10 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
                 
-                // Always scroll to top after page loads
+                // Simple scroll to top only (no heavy JavaScript)
                 view.scrollTo(0, 0);
                 
-                // Inject comprehensive JavaScript to prevent ALL scrolling
-                String script = "javascript:(function() { " +
-                    "window.scrollTo(0, 0); " +
-                    "document.body.scrollTop = 0; " +
-                    "document.documentElement.scrollTop = 0; " +
-                    
-                    // Override window scroll functions
-                    "window.scroll = function() { window.scrollTo(0, 0); }; " +
-                    "window.scrollTo = function() { return false; }; " +
-                    "window.scrollBy = function() { return false; }; " +
-                    
-                    // Block all scroll events
-                    "document.addEventListener('scroll', function(e) { " +
-                        "e.preventDefault(); e.stopPropagation(); window.scrollTo(0, 0); " +
-                    "}, true); " +
-                    
-                    // Block wheel events
-                    "document.addEventListener('wheel', function(e) { " +
-                        "e.preventDefault(); e.stopPropagation(); " +
-                    "}, true); " +
-                    
-                    // Block touch scroll events
-                    "document.addEventListener('touchmove', function(e) { " +
-                        "e.preventDefault(); e.stopPropagation(); " +
-                    "}, true); " +
-                    
-                    // Block keyboard scroll events
-                    "document.addEventListener('keydown', function(e) { " +
-                        "if([32,33,34,35,36,37,38,39,40].includes(e.keyCode)) { " +
-                            "e.preventDefault(); e.stopPropagation(); " +
-                        "} " +
-                    "}, true); " +
-                    
-                    // Force scroll to top repeatedly
-                    "setInterval(function() { " +
-                        "if(window.scrollY !== 0 || document.body.scrollTop !== 0 || document.documentElement.scrollTop !== 0) { " +
-                            "window.scrollTo(0, 0); document.body.scrollTop = 0; document.documentElement.scrollTop = 0; " +
-                        "} " +
-                    "}, 100); " +
-                    
-                    "})()";
-                view.evaluateJavascript(script, null);
-                
-                Log.d(TAG, "WebView " + tag + " loaded with aggressive scroll blocking: " + url);
-                Log.d(TAG, "WebView " + tag + " measured size: " + view.getWidth() + "x" + view.getHeight());
+                Log.d(TAG, "WebView " + tag + " loaded: " + url);
             }
             
             @Override
@@ -756,7 +698,7 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
             }
         });
         
-        Log.d(TAG, "Setup basic WebView with scroll prevention: " + tag);
+        Log.d(TAG, "Setup optimized WebView: " + tag);
     }
     
     private void applyOrientation(String orientation) {
