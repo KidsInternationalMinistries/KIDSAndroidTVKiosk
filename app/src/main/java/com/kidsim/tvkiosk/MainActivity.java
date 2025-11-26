@@ -255,12 +255,6 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
                     child.setVisibility(View.VISIBLE);
                     currentPageIndex = pageIndex;
                     
-                    // Ensure the WebView in this container scrolls to top
-                    if (webViews != null && pageIndex < webViews.length && webViews[pageIndex] != null) {
-                        webViews[pageIndex].scrollTo(0, 0);
-                        Log.d(TAG, "Scrolled WebView " + pageIndex + " to top when showing page");
-                    }
-                    
                     Log.d(TAG, "Showing page: " + pageIndex + " (container at root index " + i + ")");
                     return;
                 }
@@ -596,18 +590,8 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
                 container.setId(View.generateViewId());
                 container.setBackgroundColor(0xFF000000); // Black background
                 
-                // Create WebView for this page - lightweight version
-                webViews[i] = new WebView(this) {
-                    @Override
-                    public void scrollTo(int x, int y) {
-                        super.scrollTo(0, 0); // Keep scroll-to-top override
-                    }
-                    
-                    @Override
-                    public void scrollBy(int x, int y) {
-                        // Do nothing - disable scrollBy
-                    }
-                };
+                // Create simple WebView for this page
+                webViews[i] = new WebView(this);
                 webViews[i].setId(View.generateViewId());
                 
                 // Apply rotation to WebView itself (not CSS content rotation)
@@ -668,14 +652,12 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         webSettings.setBuiltInZoomControls(false);
         webSettings.setDisplayZoomControls(false);
         
-        // Minimal scroll prevention (much lighter than before)
-        webView.setFocusable(false);
-        webView.setFocusableInTouchMode(false);
+        // Minimal scroll prevention
         webView.setOverScrollMode(WebView.OVER_SCROLL_NEVER);
         webView.setVerticalScrollBarEnabled(false);
         webView.setHorizontalScrollBarEnabled(false);
         
-        // Lightweight WebView client
+        // Simple WebView client - no script injection
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
@@ -686,7 +668,7 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
                 
-                // Simple scroll to top only (no heavy JavaScript)
+                // Simple scroll to top only - no JavaScript
                 view.scrollTo(0, 0);
                 
                 Log.d(TAG, "WebView " + tag + " loaded: " + url);
@@ -698,7 +680,7 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
             }
         });
         
-        Log.d(TAG, "Setup optimized WebView: " + tag);
+        Log.d(TAG, "Setup simple WebView: " + tag);
     }
     
     private void applyOrientation(String orientation) {
@@ -1236,8 +1218,6 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         layoutParams.gravity = android.view.Gravity.CENTER;
         webView.setLayoutParams(layoutParams);
         
-        // Initial scroll to top
-        webView.scrollTo(0, 0);
-        Log.d(TAG, "Applied rotation and initial scroll to top");
+        Log.d(TAG, "Applied " + rotationDegrees + "° rotation to WebView");
     }
 }
