@@ -255,6 +255,9 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
                     child.setVisibility(View.VISIBLE);
                     currentPageIndex = pageIndex;
                     
+                    // Preload the next page when this page becomes visible
+                    preloadNextPage(pageIndex);
+                    
                     Log.d(TAG, "Showing page: " + pageIndex + " (container at root index " + i + ")");
                     return;
                 }
@@ -290,12 +293,8 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         PageConfig page = pages.get(webViewIndex);
         String url = page.getUrl();
         
-        // Add cache-busting parameter if device-level clearCache is enabled
-        if (currentConfig != null && currentConfig.isClearCache()) {
-            String separator = url.contains("?") ? "&" : "?";
-            url = url + separator + "_t=" + System.currentTimeMillis();
-            Log.d(TAG, "Cache clearing enabled for WebView " + webViewIndex);
-        }
+        // Note: Cache-busting disabled for better performance
+        // Pages will be cached properly to improve loading speed
         
         Log.d(TAG, "Loading page " + webViewIndex + ": " + url);
         webViews[webViewIndex].loadUrl(url);
@@ -372,12 +371,7 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
                 PageConfig page = pages.get(currentPageIndex);
                 String url = page.getUrl();
                 
-                // Add cache-busting parameter if device-level clearCache is enabled
-                if (currentConfig != null && currentConfig.isClearCache()) {
-                    String separator = url.contains("?") ? "&" : "?";
-                    url = url + separator + "_t=" + System.currentTimeMillis();
-                    Log.d(TAG, "Cache clearing enabled for refresh");
-                }
+                // Note: Cache-busting disabled for better refresh performance
                 
                 Log.d(TAG, "Refreshing current page " + currentPageIndex + ": " + url);
                 currentWebView.loadUrl(url);
@@ -478,8 +472,14 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         currentConfig = configManager.getCurrentConfig();
         applyConfiguration(currentConfig);
         
-        // Try to update from GitHub
-        configManager.updateConfigFromGitHub(null);
+        // Defer GitHub update to background to not block initial loading
+        executor.submit(() -> {
+            try {
+                configManager.updateConfigFromGitHub(null);
+            } catch (Exception e) {
+                Log.w(TAG, "Background config update failed: " + e.getMessage());
+            }
+        });
     }
     
     private void applyConfiguration(DeviceConfig config) {
@@ -635,17 +635,26 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         // Enable JavaScript
         webSettings.setJavaScriptEnabled(true);
         
-        // Performance optimizations
+        // Aggressive performance optimizations
         webSettings.setDomStorageEnabled(true);
         webSettings.setDatabaseEnabled(true);
-        webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        webSettings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK); // Prefer cache for speed
         
         // Enable hardware acceleration
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         
-        // Re-enable important performance settings
+        // Performance settings
         webSettings.setUseWideViewPort(true);
         webSettings.setLoadWithOverviewMode(true);
+        webSettings.setAllowFileAccess(true);
+        webSettings.setAllowContentAccess(true);
+        webSettings.setLoadsImagesAutomatically(true);
+        webSettings.setBlockNetworkImage(false);
+        webSettings.setBlockNetworkLoads(false);
+        
+        // Optimize loading and caching
+        webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        webSettings.setMediaPlaybackRequiresUserGesture(false);
         
         // Disable zoom but keep performance settings
         webSettings.setSupportZoom(false);
@@ -657,7 +666,7 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         webView.setVerticalScrollBarEnabled(false);
         webView.setHorizontalScrollBarEnabled(false);
         
-        // Simple WebView client - no script injection
+        // Enhanced WebView client for better loading management
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
@@ -665,13 +674,22 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
             }
             
             @Override
+            public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+                super.onPageStarted(view, url, favicon);
+                Log.d(TAG, "WebView " + tag + " started loading: " + url);
+            }
+            
+            @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
                 
-                // Simple scroll to top only - no JavaScript
+                // Simple scroll to top
                 view.scrollTo(0, 0);
                 
-                Log.d(TAG, "WebView " + tag + " loaded: " + url);
+                Log.d(TAG, "WebView " + tag + " finished loading: " + url);
+                
+                // Mark this WebView as loaded for preloading logic
+                markWebViewLoaded(view);
             }
             
             @Override
@@ -1219,5 +1237,34 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         webView.setLayoutParams(layoutParams);
         
         Log.d(TAG, "Applied " + rotationDegrees + "° rotation to WebView");
+    }
+
+    private void preloadNextPage(int currentPageIndex) {
+        if (pages == null || webViews == null) return;
+        
+        // Calculate next page index (with wraparound)
+        int nextPageIndex = (currentPageIndex + 1) % pages.size();
+        
+        // Check if next page is already loaded
+        if (nextPageIndex < webViews.length && webViews[nextPageIndex] != null) {
+            WebView nextWebView = webViews[nextPageIndex];
+            String currentUrl = nextWebView.getUrl();
+            
+            // Only load if WebView is empty or has no URL loaded
+            if (currentUrl == null || currentUrl.equals("about:blank") || currentUrl.isEmpty()) {
+                Log.d(TAG, "Preloading next page: " + nextPageIndex);
+                loadPageIntoWebView(nextPageIndex);
+            } else {
+                Log.d(TAG, "Next page " + nextPageIndex + " already loaded: " + currentUrl);
+            }
+        }
+    }
+
+    private void markWebViewLoaded(WebView webView) {
+        // This method can be used to track loaded WebViews
+        // Currently just logs, but could be extended for more sophisticated preloading
+        if (webView != null && webView.getUrl() != null) {
+            Log.d(TAG, "WebView loaded successfully: " + webView.getUrl());
+        }
     }
 }
