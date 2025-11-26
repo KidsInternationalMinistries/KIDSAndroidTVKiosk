@@ -24,7 +24,14 @@ public class DeviceIdManager {
     public boolean isDeviceIdConfigured() {
         String deviceId = getDeviceId();
         String orientation = prefs.getString("orientation", null);
-        return deviceId != null && !deviceId.isEmpty() && orientation != null && !orientation.isEmpty();
+        
+        Log.d(TAG, "Checking device configuration - Device ID: " + (deviceId != null ? deviceId : "null") + 
+                  ", Orientation: " + (orientation != null ? orientation : "null"));
+        
+        boolean configured = deviceId != null && !deviceId.isEmpty() && orientation != null && !orientation.isEmpty();
+        Log.i(TAG, "Device configuration status: " + (configured ? "CONFIGURED" : "NOT CONFIGURED"));
+        
+        return configured;
     }
     
     /**

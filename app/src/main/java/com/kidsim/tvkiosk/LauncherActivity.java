@@ -40,13 +40,14 @@ public class LauncherActivity extends Activity {
             Log.e(TAG, "Failed to start AutoStartService", e);
         }
         
-        // Start MainActivity
+        // Start MainActivity with auto-start flag
         try {
             Intent mainIntent = new Intent(this, MainActivity.class);
             mainIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            mainIntent.putExtra("autoStart", true); // Flag to indicate auto-start
             startActivity(mainIntent);
             
-            Log.i(TAG, "MainActivity started from LauncherActivity");
+            Log.i(TAG, "MainActivity started from LauncherActivity with auto-start flag");
         } catch (Exception e) {
             Log.e(TAG, "Failed to start MainActivity", e);
         }
