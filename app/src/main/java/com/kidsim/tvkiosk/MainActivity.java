@@ -44,7 +44,6 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     
     // UI components
     private WebView[] webViews;
-    private WebView[] backupWebViews;
     private FrameLayout webViewContainer;
     private LinearLayout loadingLayout;
     private LinearLayout errorLayout;
@@ -86,9 +85,6 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     private static final long DOUBLE_BACK_PRESS_INTERVAL = 2000; // 2 seconds
     
     // WebView pool management
-    private boolean[] pageLoadStates;
-    private boolean[] backupPageLoadStates;
-    private int pagesLoaded = 0;
     private boolean initialLoadComplete = false;
     private boolean isRefreshing = false;
     private int refreshPageIndex = 0;
@@ -179,90 +175,6 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         setupUpdateButton();
     }
     
-    private void setupWebViewPool() {
-        // Configure all WebViews with the same settings
-        for (int i = 0; i < 3; i++) {
-            setupWebViewInstance(webViews[i], "Main-" + i);
-            setupWebViewInstance(backupWebViews[i], "Backup-" + i);
-            
-            // Initially hide all WebViews
-            webViews[i].setVisibility(View.GONE);
-            backupWebViews[i].setVisibility(View.GONE);
-        }
-        
-        // Setup refresh monitoring
-        setupRefreshMonitoring();
-    }
-    
-    private void setupWebViewInstance(WebView webView, String tag) {
-        WebSettings webSettings = webView.getSettings();
-        
-        // Enable JavaScript
-        webSettings.setJavaScriptEnabled(true);
-        
-        // Enable DOM storage
-        webSettings.setDomStorageEnabled(true);
-        
-        // Smart cache mode based on connectivity
-        updateWebViewCacheMode(webSettings);
-        
-        // Allow file access
-        webSettings.setAllowFileAccess(true);
-        
-        // Set user agent for better compatibility
-        webSettings.setUserAgentString(webSettings.getUserAgentString() + " AndroidTVKiosk/3.0-Pool-" + tag);
-        
-        // Scale to fit screen
-        webSettings.setLoadWithOverviewMode(true);
-        webSettings.setUseWideViewPort(true);
-        webSettings.setBuiltInZoomControls(false);
-        webSettings.setSupportZoom(false);
-        
-        // Set WebView client to handle page loading
-        webView.setWebViewClient(new WebViewClient() {
-            @Override
-            public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                return false;
-            }
-            
-            @Override
-            public void onPageFinished(WebView view, String url) {
-                super.onPageFinished(view, url);
-                Log.d(TAG, "WebView " + tag + " loaded: " + url);
-                
-                // Mark this page as loaded in the pool
-                markPageLoaded(view);
-                
-                // Hide system UI
-                hideSystemUI();
-            }
-            
-            @Override
-            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
-                super.onReceivedError(view, errorCode, description, failingUrl);
-                Log.e(TAG, "WebView " + tag + " error: " + description + " for URL: " + failingUrl);
-                
-                // Mark this page as failed
-                markPageFailed(view);
-                
-                // Show error if this is the currently visible page
-                if (view.getVisibility() == View.VISIBLE) {
-                    showError("Failed to load page: " + description);
-                }
-            }
-        });
-    }
-    
-    private void setupRefreshMonitoring() {
-        // Stop any existing refresh monitoring first
-        if (refreshHandler != null) {
-            refreshHandler.removeCallbacks(this::checkForRefresh);
-        }
-        
-        // Start background refresh system
-        refreshHandler.postDelayed(this::checkForRefresh, REFRESH_INTERVAL);
-    }
-    
     private void updateWebViewCacheMode(WebSettings webSettings) {
         if (isNetworkConnected()) {
             // Network available - use cache but allow fresh loads
@@ -276,32 +188,15 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     }
     
     private void markPageLoaded(WebView webView) {
-        // Find which WebView this is and mark as loaded
+        // Find which WebView this is and mark as loaded (for info only)
         int webViewCount = webViews != null ? webViews.length : 0;
         for (int i = 0; i < webViewCount; i++) {
             if (webViews[i] == webView) {
-                pageLoadStates[i] = true;
-                pagesLoaded++;
-                Log.d(TAG, "Main WebView " + i + " loaded. Total loaded: " + pagesLoaded + "/" + webViewCount);
-                
-                // Update loading progress
-                updateLoadingProgress();
-                break;
-            } else if (backupWebViews[i] == webView) {
-                backupPageLoadStates[i] = true;
-                Log.d(TAG, "Backup WebView " + i + " loaded");
+                Log.d(TAG, "WebView " + i + " finished loading");
                 break;
             }
         }
-        
-        // Check if ALL pages are loaded (not just 1)
-        if (!initialLoadComplete && pagesLoaded >= webViewCount) {
-            initialLoadComplete = true;
-            Log.i(TAG, "All " + webViewCount + " pages loaded! Starting page rotation.");
-            showFirstPage();
-            // Start page rotation timer now that all pages are loaded
-            startPageRotationTimer();
-        }
+        // Note: We don't wait for pages to load anymore, app flow continues regardless
     }
     
     private void markPageFailed(WebView webView) {
@@ -309,12 +204,7 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         int webViewCount = webViews != null ? webViews.length : 0;
         for (int i = 0; i < webViewCount; i++) {
             if (webViews[i] == webView) {
-                pageLoadStates[i] = false;
-                Log.w(TAG, "Main WebView " + i + " failed to load");
-                break;
-            } else if (backupWebViews[i] == webView) {
-                backupPageLoadStates[i] = false;
-                Log.w(TAG, "Backup WebView " + i + " failed to load");
+                Log.w(TAG, "WebView " + i + " failed to load");
                 break;
             }
         }
@@ -323,15 +213,13 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     private void showFirstPage() {
         // Show the first successfully loaded page
         int webViewCount = webViews != null ? webViews.length : 0;
-        for (int i = 0; i < webViewCount; i++) {
-            if (pageLoadStates[i]) {
-                currentPageIndex = i;
-                showPage(i);
-                hideErrorState();
-                hideLoadingState();  // Hide loading UI when first page is ready
-                Log.i(TAG, "Showing first loaded page: " + i);
-                return;
-            }
+        if (webViewCount > 0) {
+            currentPageIndex = 0;
+            showPage(0);
+            hideErrorState();
+            hideLoadingState();  // Hide loading UI when first page is ready
+            Log.i(TAG, "Showing first page: 0");
+            return;
         }
         
         // If no pages loaded successfully, show error
@@ -339,153 +227,69 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     }
     
     private void showPage(int pageIndex) {
-        // Safety check
-        if (webViews == null || backupWebViews == null) {
-            Log.w(TAG, "WebViews not initialized yet, cannot show page " + pageIndex);
+        if (webViewContainer == null) {
+            Log.w(TAG, "WebViewContainer not initialized yet, cannot show page " + pageIndex);
             return;
         }
         
-        // Hide all pages first
-        int webViewCount = webViews.length;
-        for (int i = 0; i < webViewCount; i++) {
-            if (webViews[i] != null) {
-                webViews[i].setVisibility(View.GONE);
+        // Get root layout where our containers are now located
+        android.view.ViewGroup rootLayout = (android.view.ViewGroup) webViewContainer.getParent();
+        
+        // Hide all our purple containers first (skip other views like loading/error layouts)
+        for (int i = 0; i < rootLayout.getChildCount(); i++) {
+            android.view.View child = rootLayout.getChildAt(i);
+            // Only hide our purple containers (FrameLayouts with purple background)
+            if (child instanceof FrameLayout && child.getId() != R.id.webViewContainer && 
+                child.getId() != R.id.loadingLayout && child.getId() != R.id.errorLayout) {
+                child.setVisibility(View.GONE);
             }
-            if (backupWebViews[i] != null) {
-                backupWebViews[i].setVisibility(View.GONE);
-            }
         }
         
-        // Show the requested page
-        if (pageIndex >= 0 && pageIndex < webViewCount && webViews[pageIndex] != null) {
-            webViews[pageIndex].setVisibility(View.VISIBLE);
-            currentPageIndex = pageIndex;
-            Log.d(TAG, "Showing page: " + pageIndex);
-        } else {
-            Log.w(TAG, "Invalid page index or WebView not ready: " + pageIndex);
-        }
-    }
-    
-    private void checkForRefresh() {
-        if (isRefreshing || !isNetworkConnected()) {
-            // Skip refresh if already refreshing or no network
-            refreshHandler.postDelayed(this::checkForRefresh, REFRESH_INTERVAL);
-            return;
-        }
-        
-        long currentTime = System.currentTimeMillis();
-        if (currentTime - lastRefreshTime >= REFRESH_INTERVAL) {
-            startBackgroundRefresh();
-        }
-        
-        // Schedule next check (only one at a time)
-        refreshHandler.removeCallbacks(this::checkForRefresh);
-        refreshHandler.postDelayed(this::checkForRefresh, REFRESH_INTERVAL);
-    }
-    
-    private void startBackgroundRefresh() {
-        if (pages == null || pages.size() == 0) {
-            Log.w(TAG, "No pages to refresh");
-            return;
-        }
-        
-        isRefreshing = true;
-        refreshPageIndex = 0;
-        lastRefreshTime = System.currentTimeMillis();
-        
-        Log.i(TAG, "Starting background refresh of all pages");
-        refreshNextPage();
-    }
-    
-    private void refreshNextPage() {
-        if (refreshPageIndex >= pages.size() || refreshPageIndex >= 3) {
-            // Refresh complete
-            isRefreshing = false;
-            Log.i(TAG, "Background refresh completed");
-            
-            // Swap backup WebViews with main WebViews if refresh was successful
-            swapToRefreshedPages();
-            return;
-        }
-        
-        PageConfig page = pages.get(refreshPageIndex);
-        String pageUrl = page.getUrl();
-        WebView backupWebView = backupWebViews[refreshPageIndex];
-        
-        Log.d(TAG, "Refreshing page " + refreshPageIndex + ": " + pageUrl);
-        
-        // Load the page in the backup WebView
-        backupWebView.loadUrl(pageUrl);
-        
-        // Move to next page after a delay
-        refreshHandler.postDelayed(() -> {
-            refreshPageIndex++;
-            refreshNextPage();
-        }, 5000); // 5 second delay between page refreshes
-    }
-    
-    private void swapToRefreshedPages() {
-        // Safety check
-        if (webViews == null || backupWebViews == null || backupPageLoadStates == null) {
-            Log.w(TAG, "WebViews not initialized, cannot swap pages");
-            return;
-        }
-        
-        // Only swap pages that loaded successfully in backup WebViews
-        int webViewCount = webViews.length;
-        for (int i = 0; i < webViewCount; i++) {
-            if (backupPageLoadStates[i]) {
-                // Hide current main WebView
-                if (webViews[i] != null) {
-                    webViews[i].setVisibility(View.GONE);
+        // Show the requested page's container
+        int containerIndex = 0;
+        for (int i = 0; i < rootLayout.getChildCount(); i++) {
+            android.view.View child = rootLayout.getChildAt(i);
+            if (child instanceof FrameLayout && child.getId() != R.id.webViewContainer && 
+                child.getId() != R.id.loadingLayout && child.getId() != R.id.errorLayout) {
+                if (containerIndex == pageIndex) {
+                    child.setVisibility(View.VISIBLE);
+                    currentPageIndex = pageIndex;
+                    
+                    // Ensure the WebView in this container scrolls to top
+                    if (webViews != null && pageIndex < webViews.length && webViews[pageIndex] != null) {
+                        webViews[pageIndex].scrollTo(0, 0);
+                        Log.d(TAG, "Scrolled WebView " + pageIndex + " to top when showing page");
+                    }
+                    
+                    Log.d(TAG, "Showing page: " + pageIndex + " (container at root index " + i + ")");
+                    return;
                 }
-                
-                // Swap the WebView references
-                WebView temp = webViews[i];
-                webViews[i] = backupWebViews[i];
-                backupWebViews[i] = temp;
-                
-                // Update state
-                pageLoadStates[i] = true;
-                backupPageLoadStates[i] = false;
-                
-                // Show the refreshed page if it's the current one
-                if (i == currentPageIndex) {
-                    webViews[i].setVisibility(View.VISIBLE);
-                }
-                
-                Log.i(TAG, "Swapped to refreshed page: " + i);
+                containerIndex++;
             }
         }
+        
+        Log.w(TAG, "Could not find container for page index: " + pageIndex);
     }
     
-    private void loadPagesIntoPool() {
-        // Reset states
-        pagesLoaded = 0;
-        initialLoadComplete = false;
-        
+    private void loadPagesIntoWebViews() {
+        // Just load all page URLs immediately without waiting
         int webViewCount = webViews != null ? webViews.length : 0;
-        
-        // Reset all page load states
-        for (int i = 0; i < webViewCount; i++) {
-            pageLoadStates[i] = false;
-            backupPageLoadStates[i] = false;
-        }
-        
-        // Show loading state
-        showLoadingState();
-        
-        // Load all pages into the WebView pool (no longer limited to 3)
         int pagesToLoad = Math.min(pages.size(), webViewCount);
+        
         for (int i = 0; i < pagesToLoad; i++) {
             loadPageIntoWebView(i);
         }
         
-        Log.i(TAG, "Loading " + pagesToLoad + " pages into WebView pool");
+        Log.i(TAG, "Set URLs for " + pagesToLoad + " pages, starting display immediately");
+        
+        // Start showing pages right away
+        showFirstPage();
+        startPageRotationTimer();
+        startRefreshTimer();
     }
     
     private void loadPageIntoWebView(int webViewIndex) {
-        if (webViewIndex >= 3 || webViewIndex >= pages.size()) {
+        if (webViewIndex >= pages.size() || webViews == null || webViews[webViewIndex] == null) {
             return;
         }
         
@@ -532,17 +336,12 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
             // Move to next page
             int nextPageIndex = (currentPageIndex + 1) % pages.size();
             
-            // Switch to next page if it's loaded
-            if (pageLoadStates != null && nextPageIndex < pageLoadStates.length && pageLoadStates[nextPageIndex]) {
-                showPage(nextPageIndex);
-                currentPageIndex = nextPageIndex;
-                
-                // Schedule next rotation
-                setupPageRotationTimer();
-            } else {
-                Log.w(TAG, "Next page " + nextPageIndex + " not ready, retrying in 5 seconds");
-                pageHandler.postDelayed(this::setupPageRotationTimer, 5000);
-            }
+            // Switch to next page
+            showPage(nextPageIndex);
+            currentPageIndex = nextPageIndex;
+            
+            // Schedule next rotation
+            setupPageRotationTimer();
         };
         
         pageHandler.postDelayed(pageRotationRunnable, displayTime);
@@ -552,6 +351,46 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
 
 
     
+    private void startRefreshTimer() {
+        if (refreshHandler != null) {
+            refreshHandler.removeCallbacks(refreshRunnable);
+        }
+        
+        refreshRunnable = () -> {
+            Log.d(TAG, "Periodic refresh triggered");
+            refreshCurrentPage();
+            // Schedule next refresh
+            startRefreshTimer();
+        };
+        
+        // Start refresh timer (10 minutes)
+        refreshHandler.postDelayed(refreshRunnable, 10 * 60 * 1000);
+        Log.d(TAG, "Refresh timer started - next refresh in 10 minutes");
+    }
+
+    /**
+     * Refresh the current page by reloading its URL
+     */
+    private void refreshCurrentPage() {
+        if (webViews != null && currentPageIndex >= 0 && currentPageIndex < webViews.length) {
+            WebView currentWebView = webViews[currentPageIndex];
+            if (currentWebView != null && pages != null && currentPageIndex < pages.size()) {
+                PageConfig page = pages.get(currentPageIndex);
+                String url = page.getUrl();
+                
+                // Add cache-busting parameter if device-level clearCache is enabled
+                if (currentConfig != null && currentConfig.isClearCache()) {
+                    String separator = url.contains("?") ? "&" : "?";
+                    url = url + separator + "_t=" + System.currentTimeMillis();
+                    Log.d(TAG, "Cache clearing enabled for refresh");
+                }
+                
+                Log.d(TAG, "Refreshing current page " + currentPageIndex + ": " + url);
+                currentWebView.loadUrl(url);
+            }
+        }
+    }
+
     private boolean isNetworkConnected() {
         try {
             ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
@@ -676,13 +515,10 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
             if (webViews[i] != null) {
                 updateWebViewCacheMode(webViews[i].getSettings());
             }
-            if (backupWebViews[i] != null) {
-                updateWebViewCacheMode(backupWebViews[i].getSettings());
-            }
         }
         
-        // Load pages into WebView pool
-        loadPagesIntoPool();
+        // Load pages into WebViews
+        loadPagesIntoWebViews();
         
         Log.i(TAG, "Configuration applied with " + pages.size() + " pages, network: " + 
               (isNetworkAvailable ? "CONNECTED" : "OFFLINE"));
@@ -692,7 +528,7 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
      * Setup dynamic WebViews based on the number of pages
      */
     private void setupDynamicWebViews(int pageCount) {
-        Log.i(TAG, "Setting up " + pageCount + " dynamic WebViews");
+        Log.i(TAG, "Setting up " + pageCount + " WebViews (simple version)");
         
         // Safety check - make sure webViewContainer is initialized
         if (webViewContainer == null) {
@@ -703,110 +539,224 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         // Clear existing WebViews
         webViewContainer.removeAllViews();
         
-        // Get device dimensions for rotation calculations
+        // Ensure no clipping of rotated containers - disable on entire hierarchy
+        webViewContainer.setClipChildren(false);
+        webViewContainer.setClipToPadding(false);
+        
+        // Also disable clipping on webViewContainer's parent (the RelativeLayout)
+        android.view.ViewParent parent = webViewContainer.getParent();
+        if (parent instanceof android.view.ViewGroup) {
+            android.view.ViewGroup parentGroup = (android.view.ViewGroup) parent;
+            parentGroup.setClipChildren(false);
+            parentGroup.setClipToPadding(false);
+            Log.d(TAG, "Disabled clipping on parent: " + parent.getClass().getSimpleName());
+            
+            // Go up one more level if needed
+            android.view.ViewParent grandParent = parentGroup.getParent();
+            if (grandParent instanceof android.view.ViewGroup) {
+                android.view.ViewGroup grandParentGroup = (android.view.ViewGroup) grandParent;
+                grandParentGroup.setClipChildren(false);
+                grandParentGroup.setClipToPadding(false);
+                Log.d(TAG, "Disabled clipping on grandparent: " + grandParent.getClass().getSimpleName());
+            }
+        }
+        
+        // Initialize arrays with dynamic size
+        webViews = new WebView[pageCount];
+        
+        // Check if we need content rotation based on configuration
+        String rotationConfig = deviceIdManager.getOrientation(); // This now contains rotation degrees
+        int rotationDegrees = 0;
+        
+        // Parse rotation configuration (0, 90, 180, 270)
+        try {
+            rotationDegrees = Integer.parseInt(rotationConfig);
+        } catch (NumberFormatException e) {
+            // Fallback for old "portrait"/"landscape" values
+            if ("portrait".equalsIgnoreCase(rotationConfig)) {
+                rotationDegrees = 90;
+            } else {
+                rotationDegrees = 0;
+            }
+        }
+        
+        Log.d(TAG, "Rotation configuration: " + rotationConfig + " -> " + rotationDegrees + " degrees");
+        
+        // Get device dimensions for portrait rotation
         android.util.DisplayMetrics displayMetrics = new android.util.DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
         int deviceWidth = displayMetrics.widthPixels;
         int deviceHeight = displayMetrics.heightPixels;
         
-        Log.d(TAG, "Device dimensions: " + deviceWidth + "x" + deviceHeight);
-        
-        // Initialize arrays with dynamic size
-        webViews = new WebView[pageCount];
-        backupWebViews = new WebView[pageCount];
-        pageLoadStates = new boolean[pageCount];
-        backupPageLoadStates = new boolean[pageCount];
-        
-        // Get current orientation setting from local device preferences
-        String currentOrientation = deviceIdManager.getOrientation();
-        boolean isPortraitMode = "portrait".equalsIgnoreCase(currentOrientation);
-        Log.i(TAG, "Setting up WebViews for orientation: " + currentOrientation);
-        
-        // Create WebViews dynamically
+        // Create WebViews dynamically - simple version
         for (int i = 0; i < pageCount; i++) {
             try {
-                // Create main WebView
-                webViews[i] = new WebView(this);
+                // Create a container for each page
+                FrameLayout container = new FrameLayout(this);
+                container.setId(View.generateViewId());
+                container.setBackgroundColor(0xFF000000); // Black background
+                
+                // Create WebView for this page - use custom non-scrollable WebView
+                webViews[i] = new WebView(this) {
+                    @Override
+                    public void scrollTo(int x, int y) {
+                        super.scrollTo(0, 0); // Force all scrollTo calls to go to top
+                    }
+                    
+                    @Override
+                    public void scrollBy(int x, int y) {
+                        // Do nothing - completely disable scrollBy
+                    }
+                    
+                    @Override
+                    public boolean onTouchEvent(android.view.MotionEvent event) {
+                        // Disable touch scrolling but allow clicks
+                        if (event.getAction() == android.view.MotionEvent.ACTION_MOVE) {
+                            return true; // Consume move events to prevent scrolling
+                        }
+                        return super.onTouchEvent(event);
+                    }
+                    
+                    @Override
+                    public boolean overScrollBy(int deltaX, int deltaY, int scrollX, int scrollY,
+                                              int scrollRangeX, int scrollRangeY, int maxOverScrollX,
+                                              int maxOverScrollY, boolean isTouchEvent) {
+                        return false; // Disable overscroll
+                    }
+                };
                 webViews[i].setId(View.generateViewId());
                 
-                // Only apply rotation in portrait mode to display landscape content
-                if (isPortraitMode) {
-                    applyWebViewRotation(webViews[i], deviceWidth, deviceHeight);
-                } else {
-                    // Landscape mode - normal layout
-                    FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(
-                        FrameLayout.LayoutParams.MATCH_PARENT,
-                        FrameLayout.LayoutParams.MATCH_PARENT
-                    );
-                    webViews[i].setLayoutParams(layoutParams);
-                }
+                // Apply rotation to WebView itself (not CSS content rotation)
+                applyWebViewRotation(webViews[i], rotationDegrees, deviceWidth, deviceHeight);
                 
-                webViews[i].setBackgroundColor(0xFF000000); // Black background
-                webViews[i].setVisibility(View.GONE);
-                webViewContainer.addView(webViews[i]);
+                // Add WebView to container
+                container.addView(webViews[i]);
                 
-                // Create backup WebView
-                backupWebViews[i] = new WebView(this);
-                backupWebViews[i].setId(View.generateViewId());
+                // Setup basic WebView settings
+                setupBasicWebView(webViews[i], "WebView-" + i);
                 
-                // Only apply rotation in portrait mode to display landscape content
-                if (isPortraitMode) {
-                    applyWebViewRotation(backupWebViews[i], deviceWidth, deviceHeight);
-                } else {
-                    // Landscape mode - normal layout
-                    FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(
-                        FrameLayout.LayoutParams.MATCH_PARENT,
-                        FrameLayout.LayoutParams.MATCH_PARENT
-                    );
-                    backupWebViews[i].setLayoutParams(layoutParams);
-                }
+                // Setup container layout - use explicit pixel dimensions
+                android.widget.RelativeLayout.LayoutParams containerParams = 
+                    new android.widget.RelativeLayout.LayoutParams(deviceWidth, deviceHeight);
                 
-                backupWebViews[i].setBackgroundColor(0xFF000000); // Black background
-                backupWebViews[i].setVisibility(View.GONE);
-                webViewContainer.addView(backupWebViews[i]);
+                Log.d(TAG, "Created WebView container " + i + " (" + deviceWidth + "x" + deviceHeight + ") with " + rotationDegrees + "° content rotation");
                 
-                // Setup WebView instances
-                setupWebViewInstance(webViews[i], "Main-" + i);
-                setupWebViewInstance(backupWebViews[i], "Backup-" + i);
+                container.setLayoutParams(containerParams);
                 
-                Log.d(TAG, "Created rotated WebView pair " + i);
+                // Initially hide container
+                container.setVisibility(View.GONE);
+                
+                // Add containers directly to root RelativeLayout to bypass any FrameLayout constraints
+                android.view.ViewGroup rootLayout = (android.view.ViewGroup) webViewContainer.getParent();
+                rootLayout.addView(container);
+                
+                Log.d(TAG, "Added container " + i + " directly to root RelativeLayout");
                 
             } catch (Exception e) {
-                Log.e(TAG, "Error creating WebView " + i, e);
+                Log.e(TAG, "Error creating container " + i, e);
                 return;
             }
         }
         
-        // Reset counters
-        pagesLoaded = 0;
-        initialLoadComplete = false;
-        
-        Log.i(TAG, "Dynamic WebView setup complete for " + pageCount + " pages with rotation");
+        Log.i(TAG, "Simple WebView setup complete for " + pageCount + " pages");
     }
     
-    private void applyWebViewRotation(WebView webView, int deviceWidth, int deviceHeight) {
-        // Rotate the WebView by 90 degrees for portrait mode
-        // This allows landscape web content to display properly in portrait orientation
-        webView.setRotation(90f);
+    private void setupBasicWebView(WebView webView, String tag) {
+        WebSettings webSettings = webView.getSettings();
         
-        // Swap width and height for the rotated view
-        // Since we're rotating 90 degrees, the view's width becomes the device height
-        // and the view's height becomes the device width
-        FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(
-            deviceHeight, // Width becomes device height
-            deviceWidth   // Height becomes device width
-        );
+        // Enable JavaScript
+        webSettings.setJavaScriptEnabled(true);
         
-        // Center the rotated view within the container
-        layoutParams.gravity = android.view.Gravity.CENTER;
+        // Basic settings only
+        webSettings.setDomStorageEnabled(true);
         
-        webView.setLayoutParams(layoutParams);
+        // Disable zoom and scaling that could cause scrolling
+        webSettings.setSupportZoom(false);
+        webSettings.setBuiltInZoomControls(false);
+        webSettings.setDisplayZoomControls(false);
+        webSettings.setUseWideViewPort(false); // Disabled to prevent scaling issues
+        webSettings.setLoadWithOverviewMode(false); // Disabled to prevent scaling issues
         
-        // Set the pivot point for rotation to the center of the view
-        webView.setPivotX(deviceHeight / 2f);
-        webView.setPivotY(deviceWidth / 2f);
+        // Disable focus and scrolling behaviors
+        webView.setFocusable(false);
+        webView.setFocusableInTouchMode(false);
+        webView.clearFocus();
+        webView.setScrollbarFadingEnabled(false);
+        webView.setVerticalScrollBarEnabled(false);
+        webView.setHorizontalScrollBarEnabled(false);
         
-        Log.d(TAG, "Applied 90° rotation for portrait mode: " + deviceWidth + "x" + deviceHeight + " -> " + deviceHeight + "x" + deviceWidth);
+        // Additional aggressive scroll prevention
+        webView.setOverScrollMode(WebView.OVER_SCROLL_NEVER);
+        webView.setScrollContainer(false);
+        
+        // Simple WebView client with scroll prevention
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                return false;
+            }
+            
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                
+                // Always scroll to top after page loads
+                view.scrollTo(0, 0);
+                
+                // Inject comprehensive JavaScript to prevent ALL scrolling
+                String script = "javascript:(function() { " +
+                    "window.scrollTo(0, 0); " +
+                    "document.body.scrollTop = 0; " +
+                    "document.documentElement.scrollTop = 0; " +
+                    
+                    // Override window scroll functions
+                    "window.scroll = function() { window.scrollTo(0, 0); }; " +
+                    "window.scrollTo = function() { return false; }; " +
+                    "window.scrollBy = function() { return false; }; " +
+                    
+                    // Block all scroll events
+                    "document.addEventListener('scroll', function(e) { " +
+                        "e.preventDefault(); e.stopPropagation(); window.scrollTo(0, 0); " +
+                    "}, true); " +
+                    
+                    // Block wheel events
+                    "document.addEventListener('wheel', function(e) { " +
+                        "e.preventDefault(); e.stopPropagation(); " +
+                    "}, true); " +
+                    
+                    // Block touch scroll events
+                    "document.addEventListener('touchmove', function(e) { " +
+                        "e.preventDefault(); e.stopPropagation(); " +
+                    "}, true); " +
+                    
+                    // Block keyboard scroll events
+                    "document.addEventListener('keydown', function(e) { " +
+                        "if([32,33,34,35,36,37,38,39,40].includes(e.keyCode)) { " +
+                            "e.preventDefault(); e.stopPropagation(); " +
+                        "} " +
+                    "}, true); " +
+                    
+                    // Force scroll to top repeatedly
+                    "setInterval(function() { " +
+                        "if(window.scrollY !== 0 || document.body.scrollTop !== 0 || document.documentElement.scrollTop !== 0) { " +
+                            "window.scrollTo(0, 0); document.body.scrollTop = 0; document.documentElement.scrollTop = 0; " +
+                        "} " +
+                    "}, 100); " +
+                    
+                    "})()";
+                view.evaluateJavascript(script, null);
+                
+                Log.d(TAG, "WebView " + tag + " loaded with aggressive scroll blocking: " + url);
+                Log.d(TAG, "WebView " + tag + " measured size: " + view.getWidth() + "x" + view.getHeight());
+            }
+            
+            @Override
+            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                Log.e(TAG, "WebView " + tag + " error: " + description);
+            }
+        });
+        
+        Log.d(TAG, "Setup basic WebView with scroll prevention: " + tag);
     }
     
     private void applyOrientation(String orientation) {
@@ -879,13 +829,6 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
                 }
             }
         }
-        if (backupWebViews != null) {
-            for (int i = 0; i < backupWebViews.length; i++) {
-                if (backupWebViews[i] != null) {
-                    backupWebViews[i].setVisibility(View.GONE);
-                }
-            }
-        }
         
         // Show error UI
         errorText.setVisibility(View.VISIBLE);
@@ -911,7 +854,7 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     private void retryCurrentPage() {
         if (pages != null && !pages.isEmpty()) {
             // Reload pages into pool
-            loadPagesIntoPool();
+            loadPagesIntoWebViews();
         } else {
             // Try to reload configuration
             loadConfiguration();
@@ -934,8 +877,8 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     
     private void updateLoadingProgress() {
         if (loadingProgress != null && pages != null) {
-            int totalPages = pages.size(); // Use actual page count, not limited to 3
-            String progressText = pagesLoaded + "/" + totalPages + " pages loaded";
+            int totalPages = pages.size();
+            String progressText = "Loading " + totalPages + " pages...";
             loadingProgress.setText(progressText);
             Log.d(TAG, "Loading progress: " + progressText);
         }
@@ -980,18 +923,11 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         super.onResume();
         hideSystemUI();
         
-        // Resume all WebViews in the pool
+        // Resume all WebViews
         if (webViews != null) {
             for (int i = 0; i < webViews.length; i++) {
                 if (webViews[i] != null) {
                     webViews[i].onResume();
-                }
-            }
-        }
-        if (backupWebViews != null) {
-            for (int i = 0; i < backupWebViews.length; i++) {
-                if (backupWebViews[i] != null) {
-                    backupWebViews[i].onResume();
                 }
             }
         }
@@ -1001,18 +937,11 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     protected void onPause() {
         super.onPause();
         
-        // Pause all WebViews in the pool
+        // Pause all WebViews
         if (webViews != null) {
             for (int i = 0; i < webViews.length; i++) {
                 if (webViews[i] != null) {
                     webViews[i].onPause();
-                }
-            }
-        }
-        if (backupWebViews != null) {
-            for (int i = 0; i < backupWebViews.length; i++) {
-                if (backupWebViews[i] != null) {
-                    backupWebViews[i].onPause();
                 }
             }
         }
@@ -1049,23 +978,13 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
             executor.shutdown();
         }
         
-        // Clean up all WebViews in the pool
+        // Clean up all WebViews
         if (webViews != null) {
             for (int i = 0; i < webViews.length; i++) {
                 if (webViews[i] != null) {
                     webViews[i].clearCache(true);
                     webViews[i].clearHistory();
                     webViews[i].destroy();
-                }
-            }
-        }
-        
-        if (backupWebViews != null) {
-            for (int i = 0; i < backupWebViews.length; i++) {
-                if (backupWebViews[i] != null) {
-                    backupWebViews[i].clearCache(true);
-                    backupWebViews[i].clearHistory();
-                    backupWebViews[i].destroy();
                 }
             }
         }
@@ -1157,8 +1076,10 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         
         Spinner orientationSpinner = new Spinner(this);
         List<String> orientations = new ArrayList<>();
-        orientations.add("Landscape");
-        orientations.add("Portrait");
+        orientations.add("0° (Normal)");
+        orientations.add("90° (Rotate Right)");
+        orientations.add("180° (Upside Down)");
+        orientations.add("270° (Rotate Left)");
         ArrayAdapter<String> orientationAdapter = new ArrayAdapter<>(this, 
             android.R.layout.simple_spinner_item, orientations);
         orientationAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -1343,5 +1264,38 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         
         Log.i(TAG, "Loaded " + deviceIds.size() + " device IDs from Google Sheets for setup");
         return deviceIds;
+    }
+
+    private void applyWebViewRotation(WebView webView, int rotationDegrees, int deviceWidth, int deviceHeight) {
+        Log.d(TAG, "Applying " + rotationDegrees + "° rotation to WebView");
+        
+        // Apply rotation to the WebView itself
+        webView.setRotation((float) rotationDegrees);
+        
+        FrameLayout.LayoutParams layoutParams;
+        
+        if (rotationDegrees == 90 || rotationDegrees == 270) {
+            // For 90° and 270° rotations, swap width and height
+            layoutParams = new FrameLayout.LayoutParams(
+                deviceHeight, // Width becomes device height
+                deviceWidth   // Height becomes device width
+            );
+            Log.d(TAG, "Swapped dimensions for " + rotationDegrees + "° rotation: " + deviceHeight + "x" + deviceWidth);
+        } else {
+            // For 0° and 180° rotations, keep normal dimensions
+            layoutParams = new FrameLayout.LayoutParams(
+                deviceWidth,
+                deviceHeight
+            );
+            Log.d(TAG, "Normal dimensions for " + rotationDegrees + "° rotation: " + deviceWidth + "x" + deviceHeight);
+        }
+        
+        // Center the rotated view within the container
+        layoutParams.gravity = android.view.Gravity.CENTER;
+        webView.setLayoutParams(layoutParams);
+        
+        // Initial scroll to top
+        webView.scrollTo(0, 0);
+        Log.d(TAG, "Applied rotation and initial scroll to top");
     }
 }

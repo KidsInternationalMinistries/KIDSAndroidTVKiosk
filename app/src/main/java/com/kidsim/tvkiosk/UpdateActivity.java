@@ -163,9 +163,11 @@ public class UpdateActivity extends Activity {
             statusText.setText("Release app - will update to latest release version");
         }
         
-        // Keep orientation selection
-        orientations.add("Landscape");
-        orientations.add("Portrait");
+        // Keep orientation selection - now using rotation degrees
+        orientations.add("0° (Normal)");
+        orientations.add("90° (Rotate Right)");
+        orientations.add("180° (Upside Down)");
+        orientations.add("270° (Rotate Left)");
         
         // Set up adapters (build type is now read-only)
         ArrayAdapter<String> buildAdapter = new ArrayAdapter<>(this, 
@@ -186,19 +188,25 @@ public class UpdateActivity extends Activity {
     private void loadSavedPreferences() {
         // Build type is now automatic based on app type, so only load orientation
         
-        // Load saved orientation using DeviceIdManager (default: Landscape)
+        // Load saved orientation using DeviceIdManager (default: 0 degrees)
         String savedOrientation = deviceIdManager.getOrientation();
-        // Capitalize first letter for spinner display
-        if ("landscape".equalsIgnoreCase(savedOrientation)) {
-            savedOrientation = "Landscape";
-        } else if ("portrait".equalsIgnoreCase(savedOrientation)) {
-            savedOrientation = "Portrait";
+        String displayOrientation;
+        
+        // Convert stored value to display format
+        if ("0".equals(savedOrientation) || "landscape".equalsIgnoreCase(savedOrientation)) {
+            displayOrientation = "0° (Normal)";
+        } else if ("90".equals(savedOrientation) || "portrait".equalsIgnoreCase(savedOrientation)) {
+            displayOrientation = "90° (Rotate Right)";
+        } else if ("180".equals(savedOrientation)) {
+            displayOrientation = "180° (Upside Down)";
+        } else if ("270".equals(savedOrientation)) {
+            displayOrientation = "270° (Rotate Left)";
         } else {
-            savedOrientation = "Landscape"; // fallback
+            displayOrientation = "0° (Normal)"; // fallback
         }
         
         for (int i = 0; i < orientationSpinner.getCount(); i++) {
-            if (orientationSpinner.getItemAtPosition(i).toString().equals(savedOrientation)) {
+            if (orientationSpinner.getItemAtPosition(i).toString().equals(displayOrientation)) {
                 orientationSpinner.setSelection(i);
                 break;
             }
@@ -289,9 +297,10 @@ public class UpdateActivity extends Activity {
                 
                 // Save orientation and device ID changes immediately
                 if (parent == orientationSpinner && orientationSpinner.getSelectedItem() != null) {
-                    String orientation = orientationSpinner.getSelectedItem().toString();
-                    deviceIdManager.setOrientation(orientation);
-                    Log.i(TAG, "Auto-saved orientation: " + orientation);
+                    String displayOrientation = orientationSpinner.getSelectedItem().toString();
+                    String storedOrientation = convertDisplayToStoredOrientation(displayOrientation);
+                    deviceIdManager.setOrientation(storedOrientation);
+                    Log.i(TAG, "Auto-saved orientation: " + displayOrientation + " -> " + storedOrientation);
                 }
                 
                 if (parent == deviceIdSpinner && deviceIdSpinner.getSelectedItem() != null) {
@@ -347,7 +356,8 @@ public class UpdateActivity extends Activity {
         Log.i(TAG, "saveAndInstallPreRelease() called - PreRelease button clicked");
         
         // Get selected values
-        String orientation = orientationSpinner.getSelectedItem().toString();
+        String displayOrientation = orientationSpinner.getSelectedItem().toString();
+        String orientation = convertDisplayToStoredOrientation(displayOrientation);
         String deviceId = deviceIdSpinner.getSelectedItem().toString();
         
         // App is unified - no separate debug/release builds
@@ -379,7 +389,8 @@ public class UpdateActivity extends Activity {
         Log.i(TAG, "saveAndInstall() called - Save and Install button clicked");
         
         // Get selected values
-        String orientation = orientationSpinner.getSelectedItem().toString();
+        String displayOrientation = orientationSpinner.getSelectedItem().toString();
+        String orientation = convertDisplayToStoredOrientation(displayOrientation);
         String deviceId = deviceIdSpinner.getSelectedItem().toString();
         
         // App is now unified - no separate debug/release builds
@@ -1138,8 +1149,9 @@ public class UpdateActivity extends Activity {
     private void saveCurrentSettings() {
         try {
             // Get selected values
-            String orientation = orientationSpinner.getSelectedItem() != null ? 
-                orientationSpinner.getSelectedItem().toString() : "Landscape";
+            String displayOrientation = orientationSpinner.getSelectedItem() != null ? 
+                orientationSpinner.getSelectedItem().toString() : "0° (Normal)";
+            String orientation = convertDisplayToStoredOrientation(displayOrientation);
             String deviceId = deviceIdSpinner.getSelectedItem() != null ? 
                 deviceIdSpinner.getSelectedItem().toString() : "";
             String buildType = "Release"; // Unified app
@@ -1161,6 +1173,21 @@ public class UpdateActivity extends Activity {
             Log.i(TAG, "Settings saved - Build: " + buildType + ", Orientation: " + orientation + ", Device: " + deviceId);
         } catch (Exception e) {
             Log.e(TAG, "Error saving settings", e);
+        }
+    }
+    
+    private String convertDisplayToStoredOrientation(String displayOrientation) {
+        // Convert display format back to stored degrees
+        if ("0° (Normal)".equals(displayOrientation)) {
+            return "0";
+        } else if ("90° (Rotate Right)".equals(displayOrientation)) {
+            return "90";
+        } else if ("180° (Upside Down)".equals(displayOrientation)) {
+            return "180";
+        } else if ("270° (Rotate Left)".equals(displayOrientation)) {
+            return "270";
+        } else {
+            return "0"; // fallback
         }
     }
 }

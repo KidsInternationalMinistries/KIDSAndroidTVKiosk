@@ -2,67 +2,17 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#000000">
+    android:background="#000000"
+    android:clipChildren="false"
+    android:clipToPadding="false">
 
     <!-- Container for multiple WebViews -->
     <FrameLayout
         android:id="@+id/webViewContainer"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
-
-        <!-- WebView for Page 1 -->
-        <WebView
-            android:id="@+id/webView0"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_margin="0dp"
-            android:background="#000000"
-            android:visibility="gone" />
-
-        <!-- WebView for Page 2 -->
-        <WebView
-            android:id="@+id/webView1"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_margin="0dp"
-            android:background="#000000"
-            android:visibility="gone" />
-
-        <!-- WebView for Page 3 -->
-        <WebView
-            android:id="@+id/webView2"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_margin="0dp"
-            android:background="#000000"
-            android:visibility="gone" />
-
-        <!-- Backup WebViews for background refresh -->
-        <WebView
-            android:id="@+id/backupWebView0"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_margin="0dp"
-            android:background="#000000"
-            android:visibility="gone" />
-
-        <WebView
-            android:id="@+id/backupWebView1"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_margin="0dp"
-            android:background="#000000"
-            android:visibility="gone" />
-
-        <WebView
-            android:id="@+id/backupWebView2"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_margin="0dp"
-            android:background="#000000"
-            android:visibility="gone" />
-
-    </FrameLayout>
+        android:layout_height="match_parent"
+        android:clipChildren="false"
+        android:clipToPadding="false" />
 
     <!-- Loading indicator -->
     <LinearLayout
