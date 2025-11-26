@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -99,6 +100,9 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         super.onCreate(savedInstanceState);
         
         Log.i(TAG, "MainActivity starting");
+        
+        // Start auto-start service to keep app running
+        startAutoStartService();
         
         // Initialize handlers
         pageHandler = new Handler(Looper.getMainLooper());
@@ -1297,5 +1301,21 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         // Initial scroll to top
         webView.scrollTo(0, 0);
         Log.d(TAG, "Applied rotation and initial scroll to top");
+    }
+    
+    private void startAutoStartService() {
+        try {
+            Intent serviceIntent = new Intent(this, AutoStartService.class);
+            
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent);
+            } else {
+                startService(serviceIntent);
+            }
+            
+            Log.i(TAG, "AutoStartService started from MainActivity");
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to start AutoStartService", e);
+        }
     }
 }

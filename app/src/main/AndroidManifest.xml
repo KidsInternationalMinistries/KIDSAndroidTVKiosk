@@ -11,6 +11,13 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    
+    <!-- Permissions for launcher functionality -->
+    <uses-permission android:name="android.permission.SET_WALLPAPER" />
+    <uses-permission android:name="android.permission.SET_WALLPAPER_HINTS" />
+    <uses-permission android:name="android.permission.BIND_APPWIDGET" />
     
     <!-- Permissions for downloading APK updates -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
@@ -51,6 +58,20 @@
         </activity>
 
         <activity
+            android:name=".LauncherActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.NoDisplay"
+            android:launchMode="singleTask"
+            android:label="Kiosk Home">
+            
+            <intent-filter android:priority="1000">
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <activity
             android:name=".UpdateActivity"
             android:exported="true"
             android:screenOrientation="sensor"
@@ -70,11 +91,16 @@
         <receiver
             android:name=".BootReceiver"
             android:enabled="true"
-            android:exported="true">
+            android:exported="true"
+            android:directBootAware="true">
             <intent-filter android:priority="1000">
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
                 <action android:name="android.intent.action.PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.USER_PRESENT" />
+                <category android:name="android.intent.category.DEFAULT" />
                 <data android:scheme="package" />
             </intent-filter>
         </receiver>
@@ -84,6 +110,19 @@
             android:name=".service.WatchdogService"
             android:enabled="true"
             android:exported="false" />
+
+        <!-- Auto-start service for reliable kiosk launching -->
+        <service
+            android:name=".AutoStartService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="specialUse" />
+
+        <!-- Job service for boot-time launching -->
+        <service
+            android:name=".KioskJobService"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:exported="true" />
             
         <!-- FileProvider for APK installation on Android 11+ -->
         <provider
