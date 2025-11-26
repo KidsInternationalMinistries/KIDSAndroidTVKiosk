@@ -16,27 +16,27 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.ArrayAdapter;
-import android.widget.Spinner;
 import com.kidsim.tvkiosk.config.ConfigurationManager;
 import com.kidsim.tvkiosk.config.DeviceConfig;
 import com.kidsim.tvkiosk.config.DeviceIdManager;
 import com.kidsim.tvkiosk.config.GoogleSheetsConfigLoader;
 import com.kidsim.tvkiosk.config.PageConfig;
 import com.kidsim.tvkiosk.service.WatchdogService;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MainActivity extends Activity implements ConfigurationManager.ConfigUpdateListener {
     
@@ -67,7 +67,6 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     private Handler pageHandler;
     private Handler configHandler;
     private Handler retryHandler;
-    private Handler refreshHandler;
     
     // Background tasks
     private ExecutorService executor;
@@ -76,7 +75,7 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     private Runnable pageRotationRunnable;
     private Runnable configUpdateRunnable;
     private Runnable retryRunnable;
-    private Runnable refreshRunnable;
+
     
     // State tracking
     private boolean isErrorState = false;
@@ -87,13 +86,6 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     // Double back press tracking for configuration access
     private long lastBackPressTime = 0;
     private static final long DOUBLE_BACK_PRESS_INTERVAL = 2000; // 2 seconds
-    
-    // WebView pool management
-    private boolean initialLoadComplete = false;
-    private boolean isRefreshing = false;
-    private int refreshPageIndex = 0;
-    private long lastRefreshTime = 0;
-    private static final long REFRESH_INTERVAL = 10 * 60 * 1000; // 10 minutes
     
     // Connectivity
     private boolean isNetworkAvailable = true;
@@ -108,7 +100,6 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         pageHandler = new Handler(Looper.getMainLooper());
         configHandler = new Handler(Looper.getMainLooper());
         retryHandler = new Handler(Looper.getMainLooper());
-        refreshHandler = new Handler(Looper.getMainLooper());
         
         // Initialize background executor
         executor = Executors.newSingleThreadExecutor();
@@ -288,8 +279,7 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
             showFirstPage();
             
             // Note: Page rotation timer will start after ALL pages are loaded
-            // Refresh timer starts immediately
-            startRefreshTimer();
+
         } else {
             Log.w(TAG, "No pages to load");
         }
@@ -354,41 +344,6 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
 
 
     
-    private void startRefreshTimer() {
-        if (refreshHandler != null) {
-            refreshHandler.removeCallbacks(refreshRunnable);
-        }
-        
-        refreshRunnable = () -> {
-            Log.d(TAG, "Periodic refresh triggered");
-            refreshCurrentPage();
-            // Schedule next refresh
-            startRefreshTimer();
-        };
-        
-        // Start refresh timer (10 minutes)
-        refreshHandler.postDelayed(refreshRunnable, 10 * 60 * 1000);
-        Log.d(TAG, "Refresh timer started - next refresh in 10 minutes");
-    }
-
-    /**
-     * Refresh the current page by reloading its URL
-     */
-    private void refreshCurrentPage() {
-        if (webViews != null && currentPageIndex >= 0 && currentPageIndex < webViews.length) {
-            WebView currentWebView = webViews[currentPageIndex];
-            if (currentWebView != null && pages != null && currentPageIndex < pages.size()) {
-                PageConfig page = pages.get(currentPageIndex);
-                String url = page.getUrl();
-                
-                // Note: Cache-busting disabled for better refresh performance
-                
-                Log.d(TAG, "Refreshing current page " + currentPageIndex + ": " + url);
-                currentWebView.loadUrl(url);
-            }
-        }
-    }
-
     private boolean isNetworkConnected() {
         try {
             ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
@@ -428,54 +383,9 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     }
     
     private void setupUpdateButton() {
-        updateButton.setOnClickListener(v -> {
-            Log.i(TAG, "Update button clicked");
-            openUpdateDownloader();
-        });
-        
-        // Show update button only for test devices
-        configManager = new ConfigurationManager(this);
-        boolean isTestDevice = isTestDevice();
-        updateButton.setVisibility(isTestDevice ? View.VISIBLE : View.GONE);
-        
-        Log.i(TAG, "Update button " + (isTestDevice ? "visible" : "hidden") + " for this device");
-    }
-    
-    private boolean isTestDevice() {
-        try {
-            String deviceId = android.provider.Settings.Secure.getString(
-                getContentResolver(), android.provider.Settings.Secure.ANDROID_ID);
-            return "test".equals(deviceId);
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to get device ID for update button", e);
-            return false;
-        }
-    }
-    
-    private void openUpdateDownloader() {
-        try {
-            // GitHub release URL for test APK download
-            String testApkUrl = "https://github.com/KidsInternationalMinistries/KIDSAndroidTVKiosk/releases/latest/download/app-test.apk";
-            
-            // Try to open with Downloader app (common on Android TV)
-            Intent downloaderIntent = new Intent(Intent.ACTION_VIEW);
-            downloaderIntent.setData(android.net.Uri.parse(testApkUrl));
-            downloaderIntent.setPackage("com.esaba.downloader");
-            
-            if (downloaderIntent.resolveActivity(getPackageManager()) != null) {
-                startActivity(downloaderIntent);
-                Log.i(TAG, "Opened test APK URL in Downloader app");
-            } else {
-                // Fallback to browser
-                Intent browserIntent = new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(testApkUrl));
-                startActivity(browserIntent);
-                Log.i(TAG, "Opened test APK URL in browser");
-            }
-            
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to open update downloader", e);
-            Toast.makeText(this, "Failed to open downloader: " + e.getMessage(), Toast.LENGTH_LONG).show();
-        }
+        // Update functionality removed - simplified kiosk
+        updateButton.setVisibility(View.GONE);
+        Log.i(TAG, "Update button hidden - functionality removed");
     }
     
     private void loadConfiguration() {
@@ -914,10 +824,6 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         
         if (retryHandler != null && retryRunnable != null) {
             retryHandler.removeCallbacks(retryRunnable);
-        }
-        
-        if (refreshHandler != null && refreshRunnable != null) {
-            refreshHandler.removeCallbacks(refreshRunnable);
         }
         
         // Clean up configuration manager

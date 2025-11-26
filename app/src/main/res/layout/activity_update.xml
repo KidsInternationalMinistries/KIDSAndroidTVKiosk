@@ -157,35 +157,9 @@
             android:focusable="true"
             android:focusableInTouchMode="true" />
 
-        <Button
-            android:id="@+id/saveAndInstallButton"
-            android:layout_width="0dp"
-            android:layout_height="50dp"
-            android:layout_weight="1"
-            android:text="Install Update"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:textColor="#ffffff"
-            android:background="@drawable/install_button_background"
-            android:layout_marginStart="2dp"
-            android:layout_marginEnd="2dp"
-            android:focusable="true"
-            android:focusableInTouchMode="true" />
 
-        <Button
-            android:id="@+id/preReleaseButton"
-            android:layout_width="0dp"
-            android:layout_height="50dp"
-            android:layout_weight="1"
-            android:text="Install PreRelease"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:textColor="#ffffff"
-            android:background="@drawable/install_button_background"
-            android:layout_marginStart="2dp"
-            android:layout_marginEnd="2dp"
-            android:focusable="true"
-            android:focusableInTouchMode="true" />
+
+
 
         <Button
             android:id="@+id/exitButton"
