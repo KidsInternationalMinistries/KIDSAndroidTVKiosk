@@ -7,7 +7,6 @@ import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -101,9 +100,6 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         
         Log.i(TAG, "MainActivity starting");
         
-        // Start auto-start service to keep app running
-        startAutoStartService();
-        
         // Initialize handlers
         pageHandler = new Handler(Looper.getMainLooper());
         configHandler = new Handler(Looper.getMainLooper());
@@ -130,14 +126,13 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         // Initialize device ID manager
         deviceIdManager = new DeviceIdManager(this);
         
-        // Check if we're returning from configuration screen or auto-starting
+        // Check if we're returning from configuration screen
         boolean returnFromConfiguration = getIntent().getBooleanExtra("returnFromConfiguration", false);
-        boolean autoStart = getIntent().getBooleanExtra("autoStart", false);
         
-        if (returnFromConfiguration || autoStart) {
-            Log.i(TAG, (autoStart ? "Auto-starting" : "Returning from configuration screen") + ", attempting direct configuration load");
-            // Load configuration directly, with validation
-            loadConfigurationWithValidation();
+        if (returnFromConfiguration) {
+            Log.i(TAG, "Returning from configuration screen, loading app directly");
+            // Load configuration directly without checking device ID
+            loadConfiguration();
         } else {
             // Check if device ID is configured, show setup if needed
             // Configuration loading will happen after setup is complete
@@ -490,57 +485,6 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         applyConfiguration(currentConfig);
         
         // Try to update from GitHub
-        configManager.updateConfigFromGitHub(null);
-    }
-    
-    /**
-     * Load configuration with validation, used for auto-start scenarios
-     */
-    private void loadConfigurationWithValidation() {
-        Log.i(TAG, "Loading configuration with validation...");
-        
-        // First check if device configuration is valid
-        if (!deviceIdManager.isDeviceIdConfigured()) {
-            Log.w(TAG, "Device ID not configured during auto-start, attempting to redirect to setup");
-            
-            // Show a brief "Configuration Updated" message and redirect
-            runOnUiThread(() -> {
-                Toast.makeText(this, "Configuration Updated", Toast.LENGTH_SHORT).show();
-            });
-            
-            // Wait a moment then redirect to setup
-            new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                Log.i(TAG, "Redirecting to UpdateActivity for device setup");
-                Intent updateIntent = new Intent(this, UpdateActivity.class);
-                updateIntent.putExtra("firstTimeSetup", true);
-                startActivity(updateIntent);
-                finish();
-            }, 1000);
-            
-            return;
-        }
-        
-        // Device is configured, proceed with normal configuration loading
-        Log.i(TAG, "Device ID configured: " + deviceIdManager.getDeviceId() + ", orientation: " + deviceIdManager.getOrientation());
-        
-        // Load and apply configuration
-        currentConfig = configManager.getCurrentConfig();
-        
-        if (currentConfig == null) {
-            Log.e(TAG, "Failed to load device configuration, showing error");
-            showError("Configuration could not be loaded. Please check device setup.");
-            return;
-        }
-        
-        // Show "Configuration Updated" message for auto-start
-        runOnUiThread(() -> {
-            Toast.makeText(this, "Configuration Updated", Toast.LENGTH_SHORT).show();
-        });
-        
-        // Apply the configuration
-        applyConfiguration(currentConfig);
-        
-        // Try to update from GitHub in background
         configManager.updateConfigFromGitHub(null);
     }
     
@@ -1101,16 +1045,8 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
      * Check if device ID is configured, redirect to update screen if needed
      */
     private void checkDeviceIdConfiguration() {
-        Log.i(TAG, "Checking device ID configuration...");
-        
         if (!deviceIdManager.isDeviceIdConfigured()) {
             Log.i(TAG, "Device ID not configured, redirecting to update screen");
-            
-            // Show a helpful message
-            runOnUiThread(() -> {
-                Toast.makeText(this, "Device setup required...", Toast.LENGTH_SHORT).show();
-            });
-            
             // Redirect to UpdateActivity for first-time setup
             Intent updateIntent = new Intent(this, UpdateActivity.class);
             updateIntent.putExtra("firstTimeSetup", true);
@@ -1361,21 +1297,5 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         // Initial scroll to top
         webView.scrollTo(0, 0);
         Log.d(TAG, "Applied rotation and initial scroll to top");
-    }
-    
-    private void startAutoStartService() {
-        try {
-            Intent serviceIntent = new Intent(this, AutoStartService.class);
-            
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForegroundService(serviceIntent);
-            } else {
-                startService(serviceIntent);
-            }
-            
-            Log.i(TAG, "AutoStartService started from MainActivity");
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to start AutoStartService", e);
-        }
     }
 }

@@ -1088,6 +1088,62 @@ public class UpdateActivity extends Activity {
     }
     
     /**
+     * Return to kiosk by closing this activity and going back to MainActivity
+     */
+    private void returnToKiosk() {
+        Log.i(TAG, "Returning to kiosk mode");
+        
+        // Save any pending preferences first
+        saveCurrentSettings();
+        
+        try {
+            // Create intent to start MainActivity
+            Intent kioskIntent = new Intent(this, MainActivity.class);
+            
+            // Add flag to indicate we're returning from configuration
+            // This will tell MainActivity to skip device ID configuration check
+            kioskIntent.putExtra("returnFromConfiguration", true);
+            
+            // Clear the task and start MainActivity as a new task
+            kioskIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            
+            // Start MainActivity
+            startActivity(kioskIntent);
+            
+            // Finish this activity
+            finish();
+            
+            Log.i(TAG, "Successfully started MainActivity and finished UpdateActivity");
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error returning to kiosk", e);
+            // If there's an error, just finish this activity
+            finish();
+        }
+    }
+    
+    /**
+     * Exit the application completely
+     */
+    private void exitApp() {
+        Log.i(TAG, "Exiting application");
+        
+        // Save any pending preferences first
+        saveCurrentSettings();
+        
+        // Show confirmation dialog
+        new AlertDialog.Builder(this)
+            .setTitle("Exit Application")
+            .setMessage("Are you sure you want to exit the application?")
+            .setPositiveButton("Yes", (dialog, which) -> {
+                finishAffinity(); // Close all activities
+                System.exit(0);   // Terminate the app process
+            })
+            .setNegativeButton("No", null)
+            .show();
+    }
+    
+    /**
      * Save current settings without performing update
      */
     private void saveCurrentSettings() {
@@ -1133,81 +1189,5 @@ public class UpdateActivity extends Activity {
         } else {
             return "0"; // fallback
         }
-    }
-    
-    /**
-     * Return to kiosk mode after saving settings
-     */
-    private void returnToKiosk() {
-        Log.i(TAG, "Return to Kiosk button clicked");
-        
-        // Save current settings first
-        saveCurrentSettings();
-        
-        // Return to MainActivity with returnFromConfiguration flag
-        Intent kioskIntent = new Intent(this, MainActivity.class);
-        kioskIntent.putExtra("returnFromConfiguration", true);
-        kioskIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
-        startActivity(kioskIntent);
-        finish();
-    }
-    
-    /**
-     * Exit to default launcher - provides escape hatch from kiosk mode
-     */
-    private void exitApp() {
-        Log.i(TAG, "Exit button clicked - returning to default launcher");
-        
-        // Save current settings first
-        saveCurrentSettings();
-        
-        try {
-            // Reset our app as the default launcher to allow user choice
-            // This requires clearing the default home activity preference
-            Intent intent = new Intent("android.settings.HOME_SETTINGS");
-            if (intent.resolveActivity(getPackageManager()) != null) {
-                startActivity(intent);
-                Log.i(TAG, "Opened home settings for launcher selection");
-            } else {
-                // Fallback: try to start the default launcher directly
-                Intent homeIntent = new Intent(Intent.ACTION_MAIN);
-                homeIntent.addCategory(Intent.CATEGORY_HOME);
-                homeIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                
-                // Remove our app from the intent to force system to pick another launcher
-                List<android.content.pm.ResolveInfo> resolveInfos = getPackageManager().queryIntentActivities(homeIntent, 0);
-                for (android.content.pm.ResolveInfo resolveInfo : resolveInfos) {
-                    String packageName = resolveInfo.activityInfo.packageName;
-                    if (!packageName.equals(getPackageName())) {
-                        // Found another launcher, try to start it
-                        homeIntent.setClassName(packageName, resolveInfo.activityInfo.name);
-                        startActivity(homeIntent);
-                        Log.i(TAG, "Started alternative launcher: " + packageName);
-                        break;
-                    }
-                }
-            }
-            
-            // Show helpful message
-            Toast.makeText(this, "Exiting kiosk mode. You can now access other TV functions.", Toast.LENGTH_LONG).show();
-            
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to exit to default launcher", e);
-            
-            // Emergency fallback: just exit our app
-            Intent homeIntent = new Intent(Intent.ACTION_MAIN);
-            homeIntent.addCategory(Intent.CATEGORY_HOME);
-            homeIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            try {
-                startActivity(homeIntent);
-            } catch (Exception fallbackError) {
-                Log.e(TAG, "Emergency fallback also failed", fallbackError);
-                // Last resort: just finish
-                finishAndRemoveTask();
-            }
-        }
-        
-        // Finish this activity
-        finish();
     }
 }
