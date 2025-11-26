@@ -13,6 +13,7 @@ import com.kidsim.tvkiosk.config.ConfigurationManager;
 import com.kidsim.tvkiosk.config.DeviceIdManager;
 import com.kidsim.tvkiosk.config.GoogleSheetsConfigLoader;
 import com.kidsim.tvkiosk.service.WatchdogService;
+import com.kidsim.tvkiosk.autostart.AutoStartManager;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
@@ -29,6 +30,12 @@ public class UpdateActivity extends Activity {
     private Spinner deviceIdSpinner;
     private Button kioskButton;
     private Button exitButton;
+    
+    // AutoStart buttons and manager
+    private Button autoStartButton;
+    private Button removeAutoStartButton;
+    private TextView autoStartStatusText;
+    private AutoStartManager autoStartManager;
     
     // Configuration and preferences
     private SharedPreferences preferences;
@@ -59,6 +66,7 @@ public class UpdateActivity extends Activity {
         setupSpinners();
         setupEventHandlers();
         loadDeviceIds();
+        updateAutoStartStatus();
     }
     
     @Override
@@ -76,6 +84,12 @@ public class UpdateActivity extends Activity {
         deviceIdSpinner = findViewById(R.id.deviceIdSpinner);
         kioskButton = findViewById(R.id.kioskButton);
         exitButton = findViewById(R.id.exitButton);
+        
+        // Initialize AutoStart components
+        autoStartButton = findViewById(R.id.autoStartButton);
+        removeAutoStartButton = findViewById(R.id.removeAutoStartButton);
+        autoStartStatusText = findViewById(R.id.autoStartStatusText);
+        autoStartManager = new AutoStartManager(this);
         
         // Display current version
         displayCurrentVersion();
@@ -173,6 +187,10 @@ public class UpdateActivity extends Activity {
     private void setupEventHandlers() {
         kioskButton.setOnClickListener(v -> returnToKiosk());
         exitButton.setOnClickListener(v -> exitApp());
+        
+        // Setup AutoStart button handlers
+        autoStartButton.setOnClickListener(v -> handleAutoStartEnable());
+        removeAutoStartButton.setOnClickListener(v -> handleAutoStartDisable());
     }
     
     private void loadDeviceIds() {
@@ -395,5 +413,88 @@ public class UpdateActivity extends Activity {
         } else {
             return "0"; // fallback
         }
+    }
+    
+    /**
+     * Update AutoStart status display
+     */
+    private void updateAutoStartStatus() {
+        try {
+            String status = autoStartManager.getAutoStartStatus();
+            autoStartStatusText.setText(status);
+            
+            // Update button states based on current status
+            boolean isDefaultLauncher = autoStartManager.isDefaultLauncher();
+            autoStartButton.setEnabled(!isDefaultLauncher);
+            removeAutoStartButton.setEnabled(isDefaultLauncher);
+            
+            Log.d(TAG, "AutoStart status updated: " + status);
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error updating AutoStart status", e);
+            autoStartStatusText.setText("AutoStart Status: Error checking status");
+        }
+    }
+    
+    /**
+     * Handle Enable AutoStart button click
+     */
+    private void handleAutoStartEnable() {
+        Log.i(TAG, "Enable AutoStart button clicked");
+        statusText.setText("Enabling AutoStart...");
+        
+        autoStartManager.enableAutoStart(this, new AutoStartManager.AutoStartCallback() {
+            @Override
+            public void onAutoStartEnabled() {
+                runOnUiThread(() -> {
+                    statusText.setText("AutoStart enabled. App will launch on boot. You may need to select this app as default launcher.");
+                    updateAutoStartStatus();
+                });
+            }
+            
+            @Override
+            public void onAutoStartDisabled() {
+                // Not used for enable operation
+            }
+            
+            @Override
+            public void onAutoStartError(String error) {
+                runOnUiThread(() -> {
+                    statusText.setText("Error enabling AutoStart: " + error);
+                    updateAutoStartStatus();
+                });
+            }
+        });
+    }
+    
+    /**
+     * Handle Remove AutoStart button click
+     */
+    private void handleAutoStartDisable() {
+        Log.i(TAG, "Remove AutoStart button clicked");
+        statusText.setText("Removing AutoStart...");
+        
+        autoStartManager.disableAutoStart(new AutoStartManager.AutoStartCallback() {
+            @Override
+            public void onAutoStartEnabled() {
+                // Not used for disable operation
+            }
+            
+            @Override
+            public void onAutoStartDisabled() {
+                runOnUiThread(() -> {
+                    statusText.setText("AutoStart disabled. App will no longer launch on boot.");
+                    updateAutoStartStatus();
+                });
+            }
+            
+            @Override
+            public void onAutoStartError(String error) {
+                runOnUiThread(() -> {
+                    statusText.setText("Error removing AutoStart: " + error);
+                    updateAutoStartStatus();
+                });
+            }
+        });
     }
 }

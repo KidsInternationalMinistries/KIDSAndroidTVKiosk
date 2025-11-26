@@ -157,17 +157,13 @@
             android:focusable="true"
             android:focusableInTouchMode="true" />
 
-
-
-
-
         <Button
             android:id="@+id/exitButton"
             android:layout_width="0dp"
             android:layout_height="50dp"
             android:layout_weight="1"
             android:text="Exit"
-            android:textSize="16sp"
+            android:textSize="14sp"
             android:textStyle="bold"
             android:textColor="#ffffff"
             android:background="@drawable/install_button_background"
@@ -176,5 +172,55 @@
             android:focusableInTouchMode="true" />
 
     </LinearLayout>
+
+    <!-- AutoStart Control Section -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="15dp"
+        android:gravity="center">
+
+        <Button
+            android:id="@+id/autoStartButton"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            android:text="Enable AutoStart"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="#ffffff"
+            android:background="@drawable/install_button_background"
+            android:layout_marginEnd="5dp"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
+
+        <Button
+            android:id="@+id/removeAutoStartButton"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            android:text="Remove AutoStart"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="#ffffff"
+            android:background="@drawable/install_button_background"
+            android:layout_marginStart="5dp"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
+
+    </LinearLayout>
+
+    <!-- AutoStart Status -->
+    <TextView
+        android:id="@+id/autoStartStatusText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="AutoStart Status: Checking..."
+        android:textSize="14sp"
+        android:textColor="#666666"
+        android:gravity="center"
+        android:layout_marginBottom="15dp" />
 
 </LinearLayout>
