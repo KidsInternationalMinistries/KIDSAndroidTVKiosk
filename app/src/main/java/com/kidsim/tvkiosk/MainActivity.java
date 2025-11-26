@@ -43,6 +43,10 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     private static final String TAG = "MainActivity";
     
     // UI components
+    private int currentLoadingPageIndex = 0;
+    private boolean[] pageLoadedStatus;
+    private boolean allPagesLoaded = false;
+    
     private WebView[] webViews;
     private FrameLayout webViewContainer;
     private LinearLayout loadingLayout;
@@ -255,9 +259,6 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
                     child.setVisibility(View.VISIBLE);
                     currentPageIndex = pageIndex;
                     
-                    // Preload the next page when this page becomes visible
-                    preloadNextPage(pageIndex);
-                    
                     Log.d(TAG, "Showing page: " + pageIndex + " (container at root index " + i + ")");
                     return;
                 }
@@ -269,20 +270,29 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     }
     
     private void loadPagesIntoWebViews() {
-        // Just load all page URLs immediately without waiting
         int webViewCount = webViews != null ? webViews.length : 0;
         int pagesToLoad = Math.min(pages.size(), webViewCount);
         
-        for (int i = 0; i < pagesToLoad; i++) {
-            loadPageIntoWebView(i);
+        if (pagesToLoad > 0) {
+            // Initialize loading tracking
+            pageLoadedStatus = new boolean[pagesToLoad];
+            currentLoadingPageIndex = 0;
+            allPagesLoaded = false;
+            
+            Log.i(TAG, "Starting sequential loading of " + pagesToLoad + " pages");
+            
+            // Start with first page only
+            loadPageIntoWebView(0);
+            
+            // Show first page immediately
+            showFirstPage();
+            
+            // Note: Page rotation timer will start after ALL pages are loaded
+            // Refresh timer starts immediately
+            startRefreshTimer();
+        } else {
+            Log.w(TAG, "No pages to load");
         }
-        
-        Log.i(TAG, "Set URLs for " + pagesToLoad + " pages, starting display immediately");
-        
-        // Start showing pages right away
-        showFirstPage();
-        startPageRotationTimer();
-        startRefreshTimer();
     }
     
     private void loadPageIntoWebView(int webViewIndex) {
@@ -688,8 +698,8 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
                 
                 Log.d(TAG, "WebView " + tag + " finished loading: " + url);
                 
-                // Mark this WebView as loaded for preloading logic
-                markWebViewLoaded(view);
+                // Mark this page as loaded and continue sequential loading
+                onPageLoadComplete(view);
             }
             
             @Override
@@ -1239,32 +1249,44 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         Log.d(TAG, "Applied " + rotationDegrees + "° rotation to WebView");
     }
 
-    private void preloadNextPage(int currentPageIndex) {
-        if (pages == null || webViews == null) return;
+    private void onPageLoadComplete(WebView webView) {
+        if (pageLoadedStatus == null || webViews == null) return;
         
-        // Calculate next page index (with wraparound)
-        int nextPageIndex = (currentPageIndex + 1) % pages.size();
-        
-        // Check if next page is already loaded
-        if (nextPageIndex < webViews.length && webViews[nextPageIndex] != null) {
-            WebView nextWebView = webViews[nextPageIndex];
-            String currentUrl = nextWebView.getUrl();
-            
-            // Only load if WebView is empty or has no URL loaded
-            if (currentUrl == null || currentUrl.equals("about:blank") || currentUrl.isEmpty()) {
-                Log.d(TAG, "Preloading next page: " + nextPageIndex);
-                loadPageIntoWebView(nextPageIndex);
-            } else {
-                Log.d(TAG, "Next page " + nextPageIndex + " already loaded: " + currentUrl);
+        // Find which page just finished loading
+        for (int i = 0; i < webViews.length; i++) {
+            if (webViews[i] == webView) {
+                pageLoadedStatus[i] = true;
+                Log.i(TAG, "Page " + i + " loaded successfully");
+                break;
             }
         }
+        
+        // Load next page if there are more to load
+        currentLoadingPageIndex++;
+        if (currentLoadingPageIndex < pages.size() && currentLoadingPageIndex < webViews.length) {
+            Log.i(TAG, "Loading next page: " + currentLoadingPageIndex);
+            loadPageIntoWebView(currentLoadingPageIndex);
+        } else {
+            // All pages loaded - start the rotation timer
+            checkAllPagesLoaded();
+        }
     }
-
-    private void markWebViewLoaded(WebView webView) {
-        // This method can be used to track loaded WebViews
-        // Currently just logs, but could be extended for more sophisticated preloading
-        if (webView != null && webView.getUrl() != null) {
-            Log.d(TAG, "WebView loaded successfully: " + webView.getUrl());
+    
+    private void checkAllPagesLoaded() {
+        if (pageLoadedStatus == null) return;
+        
+        boolean allLoaded = true;
+        for (int i = 0; i < Math.min(pages.size(), pageLoadedStatus.length); i++) {
+            if (!pageLoadedStatus[i]) {
+                allLoaded = false;
+                break;
+            }
+        }
+        
+        if (allLoaded && !allPagesLoaded) {
+            allPagesLoaded = true;
+            Log.i(TAG, "=== ALL PAGES FULLY LOADED - STARTING ROTATION TIMER ===");
+            startPageRotationTimer();
         }
     }
 }
