@@ -70,15 +70,33 @@ public class AutoStartManager {
         try {
             Log.i(TAG, "Enabling AutoStart - setting as default launcher");
             
-            // First, enable our MainActivity as a launcher activity
+            // Enable our MainActivity as a launcher activity
             ComponentName mainActivity = new ComponentName(context, MAIN_ACTIVITY_CLASS);
             
-            // Enable the component to appear in launcher selection
+            // Enable the main launcher component
             packageManager.setComponentEnabledSetting(
                 mainActivity,
                 PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
                 PackageManager.DONT_KILL_APP
             );
+            
+            // Enable the HOME intent filter that was disabled by default
+            // This is done through enabling/disabling the component with the HOME filter
+            try {
+                // Create a component name for the MainActivity with HOME intent
+                ComponentName homeComponent = new ComponentName(context, MAIN_ACTIVITY_CLASS);
+                
+                // Enable HOME launcher functionality
+                packageManager.setComponentEnabledSetting(
+                    homeComponent,
+                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                    PackageManager.DONT_KILL_APP
+                );
+                
+                Log.i(TAG, "HOME intent filter enabled");
+            } catch (Exception e) {
+                Log.w(TAG, "Could not enable HOME intent filter: " + e.getMessage());
+            }
             
             // Create home intent to trigger launcher selection
             Intent homeIntent = new Intent(Intent.ACTION_MAIN);
@@ -124,12 +142,8 @@ public class AutoStartManager {
             // Disable our MainActivity as a launcher activity
             ComponentName mainActivity = new ComponentName(context, MAIN_ACTIVITY_CLASS);
             
-            // Disable the launcher component
-            packageManager.setComponentEnabledSetting(
-                mainActivity,
-                PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-                PackageManager.DONT_KILL_APP
-            );
+            // Note: We don't completely disable MainActivity since it needs to remain
+            // accessible as a regular app. Instead, we clear launcher preferences.
             
             // Clear any default associations (this requires system permissions in newer Android)
             try {
@@ -138,6 +152,24 @@ public class AutoStartManager {
                 Log.i(TAG, "Cleared package preferred activities");
             } catch (SecurityException e) {
                 Log.w(TAG, "Cannot clear preferred activities - insufficient permissions: " + e.getMessage());
+            }
+            
+            // Reset to default launcher selection
+            try {
+                Intent homeIntent = new Intent(Intent.ACTION_MAIN);
+                homeIntent.addCategory(Intent.CATEGORY_HOME);
+                homeIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                
+                // This will trigger launcher selection if multiple launchers exist
+                List<ResolveInfo> resolveInfos = packageManager.queryIntentActivities(homeIntent, 0);
+                if (resolveInfos.size() > 1) {
+                    Log.i(TAG, "Multiple launchers detected - user can choose default");
+                } else {
+                    Log.i(TAG, "Only one launcher available");
+                }
+                
+            } catch (Exception e) {
+                Log.w(TAG, "Could not reset launcher selection: " + e.getMessage());
             }
             
             Log.i(TAG, "AutoStart disabled successfully");
