@@ -196,12 +196,13 @@ public class UpdateActivity extends Activity {
     private void loadDeviceIds() {
         statusText.setText("Loading device IDs from Google Sheets...");
         
-        // Initialize Google Sheets loader with API credentials
-        String apiKey = configManager.getGoogleSheetsApiKey();
-        String sheetsId = configManager.getGoogleSheetsId();
+        // Use hardcoded Google Sheets credentials (as they were before)
+        String sheetsId = "1n-K-cRPIpAYLzMhEPnWEfH--yNfEAV3CgJo0Y2DJg-M";
+        String apiKey = "AIzaSyAiKe3S4lXLQZI8w7qmhFmQvNnPrM2v4lQ";
         
-        if (apiKey == null || sheetsId == null) {
-            statusText.setText("Error: Google Sheets credentials not configured");
+        if (sheetsId == null || sheetsId.isEmpty() || apiKey == null || apiKey.isEmpty()) {
+            Log.e(TAG, "Google Sheets configuration missing");
+            statusText.setText("Error: Google Sheets configuration missing");
             return;
         }
         
