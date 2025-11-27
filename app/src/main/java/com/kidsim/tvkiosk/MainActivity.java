@@ -2,8 +2,13 @@ package com.kidsim.tvkiosk;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -68,6 +73,12 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
     // Background tasks
     private ExecutorService executor;
     
+    // Network connectivity checking
+    private ConnectivityManager connectivityManager;
+    private ConnectivityManager.NetworkCallback networkCallback;
+    private AlertDialog internetWaitingDialog;
+    private boolean isWaitingForInternet = false;
+    
     // Runnables
     private Runnable pageRotationRunnable;
     private Runnable configUpdateRunnable;
@@ -117,17 +128,20 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         // Initialize device ID manager
         deviceIdManager = new DeviceIdManager(this);
         
+        // Initialize connectivity manager
+        connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        
         // Check if we're returning from configuration screen
         boolean returnFromConfiguration = getIntent().getBooleanExtra("returnFromConfiguration", false);
         
         if (returnFromConfiguration) {
             Log.i(TAG, "Returning from configuration screen, loading app directly");
             // Load configuration directly without checking device ID
-            loadConfiguration();
+            checkInternetAndProceed(this::loadConfiguration);
         } else {
             // Check if device ID is configured, show setup if needed
             // Configuration loading will happen after setup is complete
-            checkDeviceIdConfiguration();
+            checkInternetAndProceed(this::checkDeviceIdConfiguration);
         }
         
         // Setup periodic configuration updates
@@ -814,6 +828,10 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
         } catch (Exception e) {
             Log.e(TAG, "Failed to stop WatchdogService", e);
         }
+        
+        // Clean up network connectivity checking
+        hideInternetWaitingDialog();
+        unregisterNetworkCallback();
     }
     
     @Override
@@ -1152,6 +1170,160 @@ public class MainActivity extends Activity implements ConfigurationManager.Confi
             allPagesLoaded = true;
             Log.i(TAG, "=== ALL PAGES FULLY LOADED - STARTING ROTATION TIMER ===");
             startPageRotationTimer();
+        }
+    }
+    
+    /**
+     * Check for internet connectivity and proceed with the given action when available
+     */
+    private void checkInternetAndProceed(Runnable proceedAction) {
+        if (isInternetAvailable()) {
+            Log.i(TAG, "Internet is available, proceeding directly");
+            proceedAction.run();
+        } else {
+            Log.i(TAG, "Internet not available, showing waiting dialog");
+            showInternetWaitingDialog(proceedAction);
+        }
+    }
+    
+    /**
+     * Check if internet is currently available
+     */
+    private boolean isInternetAvailable() {
+        try {
+            if (connectivityManager != null) {
+                Network activeNetwork = connectivityManager.getActiveNetwork();
+                if (activeNetwork != null) {
+                    NetworkCapabilities networkCapabilities = connectivityManager.getNetworkCapabilities(activeNetwork);
+                    return networkCapabilities != null && 
+                           networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                           networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Error checking internet availability: " + e.getMessage());
+        }
+        return false;
+    }
+    
+    /**
+     * Show "Waiting for internet" dialog with cancel option
+     */
+    private void showInternetWaitingDialog(Runnable proceedAction) {
+        if (internetWaitingDialog != null && internetWaitingDialog.isShowing()) {
+            return; // Dialog already showing
+        }
+        
+        isWaitingForInternet = true;
+        
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Waiting for Internet");
+        builder.setMessage("The app is waiting for an internet connection to load content.\n\nPlease ensure your device is connected to Wi-Fi or Ethernet.");
+        builder.setCancelable(false);
+        
+        // Cancel button - return to system launcher
+        builder.setNegativeButton("Cancel", (dialog, which) -> {
+            Log.i(TAG, "User cancelled waiting for internet, returning to system launcher");
+            isWaitingForInternet = false;
+            unregisterNetworkCallback();
+            returnToSystemLauncher();
+        });
+        
+        internetWaitingDialog = builder.create();
+        internetWaitingDialog.show();
+        
+        // Start monitoring for internet connectivity
+        startNetworkMonitoring(proceedAction);
+    }
+    
+    /**
+     * Start monitoring network connectivity
+     */
+    private void startNetworkMonitoring(Runnable proceedAction) {
+        if (networkCallback != null) {
+            unregisterNetworkCallback();
+        }
+        
+        NetworkRequest.Builder builder = new NetworkRequest.Builder()
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
+        
+        networkCallback = new ConnectivityManager.NetworkCallback() {
+            @Override
+            public void onAvailable(Network network) {
+                super.onAvailable(network);
+                runOnUiThread(() -> {
+                    if (isWaitingForInternet) {
+                        Log.i(TAG, "Internet became available, proceeding");
+                        hideInternetWaitingDialog();
+                        proceedAction.run();
+                    }
+                });
+            }
+            
+            @Override
+            public void onLost(Network network) {
+                super.onLost(network);
+                Log.w(TAG, "Network connection lost");
+            }
+        };
+        
+        try {
+            connectivityManager.registerNetworkCallback(builder.build(), networkCallback);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to register network callback: " + e.getMessage());
+            // Fallback: try to proceed anyway after a delay
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                if (isWaitingForInternet) {
+                    Log.w(TAG, "Network callback failed, trying to proceed anyway");
+                    hideInternetWaitingDialog();
+                    proceedAction.run();
+                }
+            }, 5000); // 5 second delay
+        }
+    }
+    
+    /**
+     * Hide the internet waiting dialog
+     */
+    private void hideInternetWaitingDialog() {
+        isWaitingForInternet = false;
+        if (internetWaitingDialog != null && internetWaitingDialog.isShowing()) {
+            internetWaitingDialog.dismiss();
+            internetWaitingDialog = null;
+        }
+        unregisterNetworkCallback();
+    }
+    
+    /**
+     * Unregister network callback
+     */
+    private void unregisterNetworkCallback() {
+        if (networkCallback != null && connectivityManager != null) {
+            try {
+                connectivityManager.unregisterNetworkCallback(networkCallback);
+            } catch (Exception e) {
+                Log.w(TAG, "Error unregistering network callback: " + e.getMessage());
+            }
+            networkCallback = null;
+        }
+    }
+    
+    /**
+     * Return to system launcher (disable our HOME launcher and open system launcher selection)
+     */
+    private void returnToSystemLauncher() {
+        try {
+            // This will open the system launcher selection or return to previous launcher
+            Intent homeIntent = new Intent(Intent.ACTION_MAIN);
+            homeIntent.addCategory(Intent.CATEGORY_HOME);
+            homeIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            startActivity(homeIntent);
+            finish();
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to return to system launcher: " + e.getMessage());
+            // Fallback: just finish the app
+            finish();
         }
     }
 }

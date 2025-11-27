@@ -33,11 +33,21 @@
             android:configChanges="orientation|keyboardHidden|screenSize"
             android:label="Kiosk">
             
+            <!-- Standard launcher intent filter - always enabled -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
+        </activity>
+        
+        <!-- Activity alias for HOME launcher functionality (AutoStart) -->
+        <activity-alias
+            android:name=".MainActivityHome"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:label="Kiosk Home">
             
             <!-- Intent filter for AutoStart/Home launcher functionality -->
             <intent-filter android:priority="1">
@@ -45,7 +55,7 @@
                 <category android:name="android.intent.category.HOME" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
-        </activity>
+        </activity-alias>
 
         <activity
             android:name=".UpdateActivity"

@@ -70,6 +70,14 @@ public class UpdateActivity extends Activity {
     }
     
     @Override
+    protected void onResume() {
+        super.onResume();
+        // Update AutoStart status when returning to this activity
+        // (e.g., after launcher selection dialog)
+        updateAutoStartStatus();
+    }
+    
+    @Override
     protected void onDestroy() {
         super.onDestroy();
         if (executor != null) {
