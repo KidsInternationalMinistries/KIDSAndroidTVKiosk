@@ -31,11 +31,10 @@ public class UpdateActivity extends Activity {
     private Button kioskButton;
     private Button exitButton;
     
-    // AutoStart buttons and manager
+    // AutoStart buttons
     private Button autoStartButton;
     private Button removeAutoStartButton;
     private TextView autoStartStatusText;
-    private AutoStartManager autoStartManager;
     
     // Configuration and preferences
     private SharedPreferences preferences;
@@ -97,7 +96,6 @@ public class UpdateActivity extends Activity {
         autoStartButton = findViewById(R.id.autoStartButton);
         removeAutoStartButton = findViewById(R.id.removeAutoStartButton);
         autoStartStatusText = findViewById(R.id.autoStartStatusText);
-        autoStartManager = new AutoStartManager(this);
         
         // Display current version
         displayCurrentVersion();
@@ -428,11 +426,11 @@ public class UpdateActivity extends Activity {
      */
     private void updateAutoStartStatus() {
         try {
-            String status = autoStartManager.getAutoStartStatus();
+            String status = AutoStartManager.getAutoStartStatus(this);
             autoStartStatusText.setText(status);
             
-            // Update button states based on current status
-            boolean isDefaultLauncher = autoStartManager.isDefaultLauncher();
+            // Update button states based on current launcher status
+            boolean isDefaultLauncher = AutoStartManager.isDefaultLauncher(this);
             autoStartButton.setEnabled(!isDefaultLauncher);
             removeAutoStartButton.setEnabled(isDefaultLauncher);
             
@@ -451,22 +449,17 @@ public class UpdateActivity extends Activity {
         Log.i(TAG, "Enable AutoStart button clicked");
         statusText.setText("Enabling AutoStart...");
         
-        autoStartManager.enableAutoStart(this, new AutoStartManager.AutoStartCallback() {
+        AutoStartManager.enableAutoStart(this, new AutoStartManager.AutoStartCallback() {
             @Override
-            public void onAutoStartEnabled() {
+            public void onSuccess(String message) {
                 runOnUiThread(() -> {
-                    statusText.setText("AutoStart enabled. App will launch on boot. You may need to select this app as default launcher.");
+                    statusText.setText(message);
                     updateAutoStartStatus();
                 });
             }
             
             @Override
-            public void onAutoStartDisabled() {
-                // Not used for enable operation
-            }
-            
-            @Override
-            public void onAutoStartError(String error) {
+            public void onError(String error) {
                 runOnUiThread(() -> {
                     statusText.setText("Error enabling AutoStart: " + error);
                     updateAutoStartStatus();
@@ -482,22 +475,17 @@ public class UpdateActivity extends Activity {
         Log.i(TAG, "Remove AutoStart button clicked");
         statusText.setText("Removing AutoStart...");
         
-        autoStartManager.disableAutoStart(new AutoStartManager.AutoStartCallback() {
+        AutoStartManager.disableAutoStart(this, new AutoStartManager.AutoStartCallback() {
             @Override
-            public void onAutoStartEnabled() {
-                // Not used for disable operation
-            }
-            
-            @Override
-            public void onAutoStartDisabled() {
+            public void onSuccess(String message) {
                 runOnUiThread(() -> {
-                    statusText.setText("AutoStart disabled. App will no longer launch on boot.");
+                    statusText.setText(message);
                     updateAutoStartStatus();
                 });
             }
             
             @Override
-            public void onAutoStartError(String error) {
+            public void onError(String error) {
                 runOnUiThread(() -> {
                     statusText.setText("Error removing AutoStart: " + error);
                     updateAutoStartStatus();
